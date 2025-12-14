@@ -178,11 +178,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: _pendingCount > 0 
-                            ? Colors.orange.withValues(alpha: 0.2)
-                            : Colors.grey.withValues(alpha: 0.1),
+                            ? Colors.orange.withOpacity(0.2)
+                            : Colors.grey.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: _pendingCount > 0 ? Colors.orange.withValues(alpha: 0.5) : Colors.transparent,
+                          color: _pendingCount > 0 ? Colors.orange.withOpacity(0.5) : Colors.transparent,
                         ),
                       ),
                       child: Row(
@@ -287,7 +287,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
                 decoration: BoxDecoration(
                   color: _result.isNotEmpty && _result != 'Invalid'
-                      ? modeColor.withValues(alpha: 0.1)
+                      ? modeColor.withOpacity(0.1)
                       : const Color(0xFF2a2a2a),
                   borderRadius: BorderRadius.circular(8),
                   border: Border(
@@ -410,7 +410,7 @@ class _HomeScreenState extends State<HomeScreen> {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
         decoration: BoxDecoration(
-          color: isSelected ? color.withValues(alpha: 0.15) : const Color(0xFF252525),
+          color: isSelected ? color.withOpacity(0.15) : const Color(0xFF252525),
           borderRadius: BorderRadius.circular(8),
           border: Border(
             left: BorderSide(
@@ -446,7 +446,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: isSelected ? color.withValues(alpha: 0.3) : Colors.grey.withValues(alpha: 0.2),
+                color: isSelected ? color.withOpacity(0.3) : Colors.grey.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(

@@ -158,9 +158,9 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -270,7 +270,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                       : Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Colors.grey.withValues(alpha: 0.1),
+                            color: Colors.grey.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Text('89,500\nNo transactions', style: TextStyle(fontSize: 10, color: Colors.grey)),
@@ -290,7 +290,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                       : Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Colors.grey.withValues(alpha: 0.1),
+                            color: Colors.grey.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Text('89,750\nNo transactions', style: TextStyle(fontSize: 10, color: Colors.grey)),
@@ -388,7 +388,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
           if (t.isExported)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-              decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(3)),
+              decoration: BoxDecoration(color: Colors.green.withOpacity(0.3), borderRadius: BorderRadius.circular(3)),
               child: const Text('✓', style: TextStyle(fontSize: 10, color: Colors.green)),
             ),
           // Delete
