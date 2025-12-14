@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -146,6 +147,66 @@ class _HomeScreenState extends State<HomeScreen> {
     _inputFocusNode.requestFocus();
   }
 
+  void _showShortcutsHelp() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF2a2a2a),
+        title: const Text(
+          'Keyboard Shortcuts',
+          style: TextStyle(color: Colors.white, fontSize: 16),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _shortcutRow('↑ / ↓', 'Switch mode'),
+            _shortcutRow('Enter', 'Save transaction'),
+            _shortcutRow('F1', 'Open transactions'),
+            _shortcutRow('Ctrl', 'Open Windows Calculator'),
+            _shortcutRow('Esc', 'Clear input'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK', style: TextStyle(color: Colors.orange)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _shortcutRow(String key, String desc) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.grey[800],
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              key,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            desc,
+            style: TextStyle(color: Colors.grey[400], fontSize: 13),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final modeColor = _getModeColor(_selectedMode);
@@ -161,11 +222,21 @@ class _HomeScreenState extends State<HomeScreen> {
               Row(
                 children: [
                   Text(
-                    'POS',
+                    'Cash Calculator',
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: 14,
                       fontWeight: FontWeight.bold,
                       color: Colors.grey[400],
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  // Help button for shortcuts
+                  GestureDetector(
+                    onTap: () => _showShortcutsHelp(),
+                    child: Icon(
+                      Icons.help_outline,
+                      size: 16,
+                      color: Colors.grey[600],
                     ),
                   ),
                   const Spacer(),
@@ -252,6 +323,20 @@ class _HomeScreenState extends State<HomeScreen> {
                               _onModeChanged((_selectedMode - 1 + 3) % 3);
                             } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
                               _onModeChanged((_selectedMode + 1) % 3);
+                            } else if (event.logicalKey == LogicalKeyboardKey.controlLeft ||
+                                       event.logicalKey == LogicalKeyboardKey.controlRight) {
+                              // Open Windows Calculator
+                              Process.run('calc.exe', []);
+                            } else if (event.logicalKey == LogicalKeyboardKey.escape) {
+                              // Clear input
+                              _inputController.clear();
+                              setState(() => _result = '');
+                            } else if (event.logicalKey == LogicalKeyboardKey.f1) {
+                              // Open transactions
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const TransactionsScreen()),
+                              ).then((_) => _loadPendingCount());
                             }
                           }
                         },
@@ -260,7 +345,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           focusNode: _inputFocusNode,
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
                           inputFormatters: [
-                            FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
+                            FilteringTextInputFormatter.allow(RegExp(r'[\d.,]')),
+                            _ThousandsSeparatorInputFormatter(),
                           ],
                           style: const TextStyle(
                             fontSize: 20,
@@ -272,6 +358,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             hintText: _selectedMode == 1 ? 'LBP amount' : 'USD amount',
                             hintStyle: TextStyle(color: Colors.grey[700], fontSize: 16),
                             border: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            enabledBorder: InputBorder.none,
                             isDense: true,
                             contentPadding: EdgeInsets.zero,
                           ),
@@ -522,5 +610,49 @@ class _HomeScreenState extends State<HomeScreen> {
       case 2: return 'Charge LBP (89,750)';
       default: return '';
     }
+  }
+}
+
+// Custom formatter for thousands separators
+class _ThousandsSeparatorInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    if (newValue.text.isEmpty) {
+      return newValue;
+    }
+
+    // Remove existing commas
+    String text = newValue.text.replaceAll(',', '');
+    
+    // Handle decimal part
+    String integerPart;
+    String decimalPart = '';
+    
+    if (text.contains('.')) {
+      final parts = text.split('.');
+      integerPart = parts[0];
+      decimalPart = '.${parts.length > 1 ? parts[1] : ''}';
+    } else {
+      integerPart = text;
+    }
+    
+    // Add commas to integer part
+    String formatted = '';
+    for (int i = 0; i < integerPart.length; i++) {
+      if (i > 0 && (integerPart.length - i) % 3 == 0) {
+        formatted += ',';
+      }
+      formatted += integerPart[i];
+    }
+    
+    formatted += decimalPart;
+    
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
   }
 }

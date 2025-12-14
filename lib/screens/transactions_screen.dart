@@ -18,11 +18,18 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   bool _showExported = false;
   final _numberFormat = NumberFormat('#,###');
   final _currencyFormat = NumberFormat('#,##0.00');
+  final _focusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
     _loadTransactions();
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
   }
 
   Future<void> _loadTransactions() async {
@@ -222,25 +229,36 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   Widget build(BuildContext context) {
     final grouped = _calculateGroupedTotals();
     
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Transactions'),
-        actions: [
-          IconButton(
-            icon: Icon(_showExported ? Icons.visibility : Icons.visibility_off),
-            tooltip: _showExported ? 'Hide Exported' : 'Show Exported',
-            onPressed: () {
-              setState(() => _showExported = !_showExported);
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.copy),
-            tooltip: 'Copy All',
-            onPressed: _filteredTransactions.isNotEmpty ? _copyAllToClipboard : null,
-          ),
-          IconButton(
-            icon: const Icon(Icons.download),
-            tooltip: 'Export CSV',
+    return RawKeyboardListener(
+      focusNode: _focusNode,
+      autofocus: true,
+      onKey: (event) {
+        if (event is RawKeyDownEvent) {
+          if (event.logicalKey == LogicalKeyboardKey.arrowLeft ||
+              event.logicalKey == LogicalKeyboardKey.escape) {
+            Navigator.pop(context);
+          }
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Transactions'),
+          actions: [
+            IconButton(
+              icon: Icon(_showExported ? Icons.visibility : Icons.visibility_off),
+              tooltip: _showExported ? 'Hide Exported' : 'Show Exported',
+              onPressed: () {
+                setState(() => _showExported = !_showExported);
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.copy),
+              tooltip: 'Copy All',
+              onPressed: _filteredTransactions.isNotEmpty ? _copyAllToClipboard : null,
+            ),
+            IconButton(
+              icon: const Icon(Icons.download),
+              tooltip: 'Export CSV',
             onPressed: _filteredTransactions.isNotEmpty ? _exportToCsv : null,
           ),
           IconButton(
@@ -325,6 +343,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                   ),
           ),
         ],
+      ),
       ),
     );
   }
