@@ -17,6 +17,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedMode = 0;
   
   final _inputController = TextEditingController();
+  final _inputFocusNode = FocusNode();
   String _result = '';
   int _pendingCount = 0;
   
@@ -39,6 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _inputController.dispose();
+    _inputFocusNode.dispose();
     super.dispose();
   }
 
@@ -122,6 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {
     // Clear input after saving
     _inputController.clear();
     setState(() => _result = '');
+    _inputFocusNode.requestFocus();
     
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -140,6 +143,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _result = '';
     });
     _inputController.clear();
+    _inputFocusNode.requestFocus();
   }
 
   @override
@@ -149,10 +153,10 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF1a1a1a),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-          child: Column(
-            children: [
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+            child: Column(
+              children: [
               // Compact Header
               Row(
                 children: [
@@ -240,31 +244,45 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: TextField(
-                        controller: _inputController,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
-                        ],
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                        decoration: InputDecoration(
-                          hintText: _selectedMode == 1 ? 'LBP amount' : 'USD amount',
-                          hintStyle: TextStyle(color: Colors.grey[700], fontSize: 18),
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                        onChanged: (_) => _calculate(),
-                        onSubmitted: (_) {
-                          if (_result.isNotEmpty && _result != 'Invalid') {
-                            _saveTransaction();
+                      child: RawKeyboardListener(
+                        focusNode: FocusNode(),
+                        onKey: (event) {
+                          if (event is RawKeyDownEvent) {
+                            if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                              _onModeChanged((_selectedMode - 1 + 3) % 3);
+                            } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                              _onModeChanged((_selectedMode + 1) % 3);
+                            }
                           }
                         },
-                        autofocus: true,
+                        child: TextField(
+                          controller: _inputController,
+                          focusNode: _inputFocusNode,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
+                          ],
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                          cursorHeight: 20,
+                          decoration: InputDecoration(
+                            hintText: _selectedMode == 1 ? 'LBP amount' : 'USD amount',
+                            hintStyle: TextStyle(color: Colors.grey[700], fontSize: 16),
+                            border: InputBorder.none,
+                            isDense: true,
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                          onChanged: (_) => _calculate(),
+                          onSubmitted: (_) {
+                            if (_result.isNotEmpty && _result != 'Invalid') {
+                              _saveTransaction();
+                            }
+                          },
+                          autofocus: true,
+                        ),
                       ),
                     ),
                     if (_inputController.text.isNotEmpty)
@@ -322,7 +340,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               
-              const Spacer(),
+              const SizedBox(height: 16),
               
               // Clear and Save buttons
               Row(
