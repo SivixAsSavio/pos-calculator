@@ -22,6 +22,12 @@ class _HomeScreenState extends State<HomeScreen> {
   String _result = '';
   int _pendingCount = 0;
   
+  // Undo support
+  String _lastInput = '';
+  String _lastResult = '';
+  int _lastMode = 0;
+  bool _canUndo = false;
+  
   final _numberFormat = NumberFormat('#,###');
   final _currencyFormat = NumberFormat('#,##0.00');
 
@@ -163,6 +169,7 @@ class _HomeScreenState extends State<HomeScreen> {
             _shortcutRow('↑ / ↓', 'Switch mode'),
             _shortcutRow('Enter', 'Save transaction'),
             _shortcutRow('F1', 'Open transactions'),
+            _shortcutRow('→ / Ctrl+Z', 'Undo clear'),
             _shortcutRow('Ctrl', 'Open Windows Calculator'),
             _shortcutRow('Esc', 'Clear input'),
           ],
@@ -328,9 +335,36 @@ class _HomeScreenState extends State<HomeScreen> {
                               // Open Windows Calculator
                               Process.run('calc.exe', []);
                             } else if (event.logicalKey == LogicalKeyboardKey.escape) {
-                              // Clear input
+                              // Save for undo, then clear
+                              if (_inputController.text.isNotEmpty) {
+                                _lastInput = _inputController.text;
+                                _lastResult = _result;
+                                _lastMode = _selectedMode;
+                                _canUndo = true;
+                              }
                               _inputController.clear();
                               setState(() => _result = '');
+                            } else if (event.logicalKey == LogicalKeyboardKey.keyZ &&
+                                       (event.isControlPressed)) {
+                              // Undo
+                              if (_canUndo) {
+                                _inputController.text = _lastInput;
+                                setState(() {
+                                  _selectedMode = _lastMode;
+                                  _result = _lastResult;
+                                  _canUndo = false;
+                                });
+                              }
+                            } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+                              // Undo with right arrow
+                              if (_canUndo) {
+                                _inputController.text = _lastInput;
+                                setState(() {
+                                  _selectedMode = _lastMode;
+                                  _result = _lastResult;
+                                  _canUndo = false;
+                                });
+                              }
                             } else if (event.logicalKey == LogicalKeyboardKey.f1) {
                               // Open transactions
                               Navigator.push(
@@ -376,6 +410,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     if (_inputController.text.isNotEmpty)
                       GestureDetector(
                         onTap: () {
+                          // Save for undo
+                          if (_inputController.text.isNotEmpty) {
+                            _lastInput = _inputController.text;
+                            _lastResult = _result;
+                            _lastMode = _selectedMode;
+                            _canUndo = true;
+                          }
                           _inputController.clear();
                           setState(() => _result = '');
                         },
