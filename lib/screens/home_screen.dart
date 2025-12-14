@@ -395,6 +395,21 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
+              
+              const SizedBox(height: 12),
+              
+              // Developer Credit
+              Center(
+                child: Text(
+                  'developed by @savio_atik\n"everything is possible if you know how to code"',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 9,
+                    color: Colors.grey[600],
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
             ],
           ),
         ),
