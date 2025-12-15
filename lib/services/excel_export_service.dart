@@ -15,8 +15,6 @@ class ExcelExportService {
   static const String _headerGray = 'FFD0CECE';    // Gray for TOTAL rows
   static const String _white = 'FFFFFFFF';
   static const String _black = 'FF000000';
-  static const String _greenTotal = 'FF00B050';    // Green for TOTAL column values
-  static const String _redText = 'FFFF0000';       // Red for LBP 0
 
   /// Generate proper Excel file with FORMULAS matching the exact layout
   static Uint8List generateExcelBytes(CashCount count) {
@@ -27,12 +25,13 @@ class ExcelExportService {
     excel.delete('Sheet1');
     final sheet = excel[sheetName];
     
-    // Styles
+    // Styles - all with vertical center alignment
     final headerStyleUSD = CellStyle(
       backgroundColorHex: ExcelColor.fromHexString(_darkBlue),
       fontColorHex: ExcelColor.fromHexString(_white),
       bold: true,
       horizontalAlign: HorizontalAlign.Center,
+      verticalAlign: VerticalAlign.Center,
     );
     
     final headerStyleLBP = CellStyle(
@@ -40,33 +39,33 @@ class ExcelExportService {
       fontColorHex: ExcelColor.fromHexString(_white),
       bold: true,
       horizontalAlign: HorizontalAlign.Center,
+      verticalAlign: VerticalAlign.Center,
     );
     
     final dataStyle = CellStyle(
       horizontalAlign: HorizontalAlign.Center,
+      verticalAlign: VerticalAlign.Center,
     );
     
     final totalRowStyle = CellStyle(
       backgroundColorHex: ExcelColor.fromHexString(_headerGray),
+      fontColorHex: ExcelColor.fromHexString(_black),
       bold: true,
       horizontalAlign: HorizontalAlign.Center,
+      verticalAlign: VerticalAlign.Center,
     );
     
-    final greenTotalStyle = CellStyle(
+    final tajHeaderStyle = CellStyle(
       backgroundColorHex: ExcelColor.fromHexString(_headerGray),
-      fontColorHex: ExcelColor.fromHexString(_greenTotal),
+      fontColorHex: ExcelColor.fromHexString(_black),
       bold: true,
       horizontalAlign: HorizontalAlign.Center,
-    );
-    
-    final redStyle = CellStyle(
-      fontColorHex: ExcelColor.fromHexString(_redText),
-      horizontalAlign: HorizontalAlign.Center,
+      verticalAlign: VerticalAlign.Center,
     );
 
     // ============ ROW 1: CALCULATOR SHEET HEADER ============
     sheet.cell(CellIndex.indexByString('B1')).value = TextCellValue('CALCULATOR SHEET - TOTAL NAHER IBRAHIM');
-    sheet.cell(CellIndex.indexByString('B1')).cellStyle = CellStyle(bold: true, fontSize: 12);
+    sheet.cell(CellIndex.indexByString('B1')).cellStyle = CellStyle(bold: true, fontSize: 12, verticalAlign: VerticalAlign.Center);
     sheet.merge(CellIndex.indexByString('B1'), CellIndex.indexByString('H1'));
     
     // ============ ROW 2: Empty ============
@@ -91,129 +90,121 @@ class ExcelExportService {
     _setCellInt(sheet, 'E4', count.usdQty[3], dataStyle);
     _setCellInt(sheet, 'F4', count.usdQty[4], dataStyle);
     _setCellInt(sheet, 'G4', count.usdQty[5], dataStyle);
-    // FORMULA: =B4*100+C4*50+D4*20+E4*10+F4*5+G4*1
     _setFormula(sheet, 'H4', 'B4*100+C4*50+D4*20+E4*10+F4*5+G4*1', dataStyle);
-    // REMAINING BALANCE formula
     _setFormula(sheet, 'K4', 'H4-J4', dataStyle);
     
     // ============ ROW 5: COLLECTOR ============
     _setCell(sheet, 'A5', 'COLLECTOR', dataStyle);
     _setFormula(sheet, 'H5', 'B5*100+C5*50+D5*20+E5*10+F5*5+G5*1', dataStyle);
-    _setFormula(sheet, 'K5', 'IF(H5=0,"LBP 0",H5-J5)', redStyle);
+    _setFormula(sheet, 'K5', 'H5-J5', dataStyle);
     
-    // ============ ROW 6: JOSEPH (empty row for manual entry) ============
-    _setCell(sheet, 'A6', 'JOSEPH', dataStyle);
+    // ============ ROW 6: user (empty row for manual entry) ============
+    _setCell(sheet, 'A6', 'user', dataStyle);
     _setFormula(sheet, 'H6', 'B6*100+C6*50+D6*20+E6*10+F6*5+G6*1', dataStyle);
-    _setFormula(sheet, 'K6', 'IF(H6=0,"\$0",H6-J6)', dataStyle);
+    _setFormula(sheet, 'K6', 'H6-J6', dataStyle);
     
-    // ============ ROW 7: SAVIO (empty row for manual entry) ============
-    _setCell(sheet, 'A7', 'SAVIO', dataStyle);
+    // ============ ROW 7: Empty row ============
     _setFormula(sheet, 'H7', 'B7*100+C7*50+D7*20+E7*10+F7*5+G7*1', dataStyle);
-    _setFormula(sheet, 'K7', 'IF(H7=0,"\$0",H7-J7)', dataStyle);
+    _setFormula(sheet, 'K7', 'H7-J7', dataStyle);
     
-    // ============ ROW 8: Empty row ============
-    _setFormula(sheet, 'H8', 'B8*100+C8*50+D8*20+E8*10+F8*5+G8*1', dataStyle);
-    _setFormula(sheet, 'K8', 'IF(H8=0,"\$0",H8-J8)', dataStyle);
+    // ============ ROW 8: USD TOTAL ============
+    _setCell(sheet, 'A8', 'TOTAL', totalRowStyle);
+    _setFormula(sheet, 'B8', 'SUM(B4:B7)', totalRowStyle);
+    _setFormula(sheet, 'C8', 'SUM(C4:C7)', totalRowStyle);
+    _setFormula(sheet, 'D8', 'SUM(D4:D7)', totalRowStyle);
+    _setFormula(sheet, 'E8', 'SUM(E4:E7)', totalRowStyle);
+    _setFormula(sheet, 'F8', 'SUM(F4:F7)', totalRowStyle);
+    _setFormula(sheet, 'G8', 'SUM(G4:G7)', totalRowStyle);
+    _setFormula(sheet, 'H8', 'SUM(H4:H7)', totalRowStyle);
+    _setFormula(sheet, 'J8', 'SUM(J4:J7)', totalRowStyle);
+    _setFormula(sheet, 'K8', 'SUM(K4:K7)', totalRowStyle);
     
-    // ============ ROW 9: USD TOTAL ============
-    _setCell(sheet, 'A9', 'TOTAL', totalRowStyle);
-    _setFormula(sheet, 'B9', 'SUM(B4:B8)', totalRowStyle);
-    _setFormula(sheet, 'C9', 'SUM(C4:C8)', totalRowStyle);
-    _setFormula(sheet, 'D9', 'SUM(D4:D8)', totalRowStyle);
-    _setFormula(sheet, 'E9', 'SUM(E4:E8)', totalRowStyle);
-    _setFormula(sheet, 'F9', 'SUM(F4:F8)', totalRowStyle);
-    _setFormula(sheet, 'G9', 'SUM(G4:G8)', totalRowStyle);
-    _setFormula(sheet, 'H9', 'SUM(H4:H8)', greenTotalStyle);
-    _setFormula(sheet, 'J9', 'SUM(J4:J8)', totalRowStyle);
-    _setFormula(sheet, 'K9', 'SUM(K4:K8)', totalRowStyle);
+    // ============ ROW 9: Empty ============
     
-    // ============ ROW 10: Empty ============
+    // ============ ROW 10: LBP HEADER ============
+    _setCell(sheet, 'A10', 'LBP', headerStyleLBP);
+    _setCell(sheet, 'B10', 'LBP 100,000', headerStyleLBP);
+    _setCell(sheet, 'C10', 'LBP 50,000', headerStyleLBP);
+    _setCell(sheet, 'D10', 'LBP 20,000', headerStyleLBP);
+    _setCell(sheet, 'E10', 'LBP 10,000', headerStyleLBP);
+    _setCell(sheet, 'F10', 'LBP 5,000', headerStyleLBP);
+    _setCell(sheet, 'G10', 'LBP 1,000', headerStyleLBP);
+    _setCell(sheet, 'H10', 'TOTAL', headerStyleLBP);
+    _setCell(sheet, 'J10', 'SEND TO HO', headerStyleLBP);
+    _setCell(sheet, 'K10', 'REMAINING BALANCE', headerStyleLBP);
     
-    // ============ ROW 11: LBP HEADER ============
-    _setCell(sheet, 'A11', 'LBP', headerStyleLBP);
-    _setCell(sheet, 'B11', 'LBP 100,000', headerStyleLBP);
-    _setCell(sheet, 'C11', 'LBP 50,000', headerStyleLBP);
-    _setCell(sheet, 'D11', 'LBP 20,000', headerStyleLBP);
-    _setCell(sheet, 'E11', 'LBP 10,000', headerStyleLBP);
-    _setCell(sheet, 'F11', 'LBP 5,000', headerStyleLBP);
-    _setCell(sheet, 'G11', 'LBP 1,000', headerStyleLBP);
-    _setCell(sheet, 'H11', 'TOTAL', headerStyleLBP);
-    _setCell(sheet, 'J11', 'SEND TO HO', headerStyleLBP);
-    _setCell(sheet, 'K11', 'REMAINING BALANCE', headerStyleLBP);
+    // ============ ROW 11: LBP BRANCH (your data) ============
+    _setCell(sheet, 'A11', 'BRANCH', dataStyle);
+    _setCellInt(sheet, 'B11', count.lbpQty[0], dataStyle);
+    _setCellInt(sheet, 'C11', count.lbpQty[1], dataStyle);
+    _setCellInt(sheet, 'D11', count.lbpQty[2], dataStyle);
+    _setCellInt(sheet, 'E11', count.lbpQty[3], dataStyle);
+    _setCellInt(sheet, 'F11', count.lbpQty[4], dataStyle);
+    _setCellInt(sheet, 'G11', count.lbpQty[5], dataStyle);
+    _setFormula(sheet, 'H11', 'B11*100000+C11*50000+D11*20000+E11*10000+F11*5000+G11*1000', dataStyle);
+    _setFormula(sheet, 'K11', 'H11-J11', dataStyle);
     
-    // ============ ROW 12: LBP BRANCH (your data) ============
-    _setCell(sheet, 'A12', 'BRANCH', dataStyle);
-    _setCellInt(sheet, 'B12', count.lbpQty[0], dataStyle);
-    _setCellInt(sheet, 'C12', count.lbpQty[1], dataStyle);
-    _setCellInt(sheet, 'D12', count.lbpQty[2], dataStyle);
-    _setCellInt(sheet, 'E12', count.lbpQty[3], dataStyle);
-    _setCellInt(sheet, 'F12', count.lbpQty[4], dataStyle);
-    _setCellInt(sheet, 'G12', count.lbpQty[5], dataStyle);
-    // FORMULA: =B12*100000+C12*50000+D12*20000+E12*10000+F12*5000+G12*1000
+    // ============ ROW 12: LBP COLLECTOR ============
+    _setCell(sheet, 'A12', 'COLLECTOR', dataStyle);
     _setFormula(sheet, 'H12', 'B12*100000+C12*50000+D12*20000+E12*10000+F12*5000+G12*1000', dataStyle);
     _setFormula(sheet, 'K12', 'H12-J12', dataStyle);
     
-    // ============ ROW 13: LBP COLLECTOR ============
-    _setCell(sheet, 'A13', 'COLLECTOR', dataStyle);
+    // ============ ROW 13: LBP user ============
+    _setCell(sheet, 'A13', 'user', dataStyle);
     _setFormula(sheet, 'H13', 'B13*100000+C13*50000+D13*20000+E13*10000+F13*5000+G13*1000', dataStyle);
-    _setFormula(sheet, 'K13', 'IF(H13=0,"LBP 0",H13-J13)', dataStyle);
+    _setFormula(sheet, 'K13', 'H13-J13', dataStyle);
     
-    // ============ ROW 14: LBP JOSEPH ============
-    _setCell(sheet, 'A14', 'JOSEPH', dataStyle);
+    // ============ ROW 14: LBP Empty row ============
     _setFormula(sheet, 'H14', 'B14*100000+C14*50000+D14*20000+E14*10000+F14*5000+G14*1000', dataStyle);
-    _setFormula(sheet, 'K14', 'IF(H14=0,"LBP 0",H14-J14)', redStyle);
+    _setFormula(sheet, 'K14', 'H14-J14', dataStyle);
     
-    // ============ ROW 15: LBP SAVIO ============
-    _setCell(sheet, 'A15', 'SAVIO', dataStyle);
-    _setFormula(sheet, 'H15', 'B15*100000+C15*50000+D15*20000+E15*10000+F15*5000+G15*1000', dataStyle);
-    _setFormula(sheet, 'K15', 'IF(H15=0,"LBP 0",H15-J15)', dataStyle);
+    // ============ ROW 15: LBP TOTAL ============
+    _setCell(sheet, 'A15', 'TOTAL', totalRowStyle);
+    _setFormula(sheet, 'B15', 'SUM(B11:B14)', totalRowStyle);
+    _setFormula(sheet, 'C15', 'SUM(C11:C14)', totalRowStyle);
+    _setFormula(sheet, 'D15', 'SUM(D11:D14)', totalRowStyle);
+    _setFormula(sheet, 'E15', 'SUM(E11:E14)', totalRowStyle);
+    _setFormula(sheet, 'F15', 'SUM(F11:F14)', totalRowStyle);
+    _setFormula(sheet, 'G15', 'SUM(G11:G14)', totalRowStyle);
+    _setFormula(sheet, 'H15', 'SUM(H11:H14)', totalRowStyle);
+    _setFormula(sheet, 'J15', 'SUM(J11:J14)', totalRowStyle);
+    _setFormula(sheet, 'K15', 'SUM(K11:K14)', totalRowStyle);
     
-    // ============ ROW 16: LBP Empty row ============
-    _setFormula(sheet, 'H16', 'B16*100000+C16*50000+D16*20000+E16*10000+F16*5000+G16*1000', dataStyle);
-    _setFormula(sheet, 'K16', 'IF(H16=0,"LBP 0",H16-J16)', redStyle);
+    // ============ ROW 16: Empty ============
     
-    // ============ ROW 17: LBP TOTAL ============
-    _setCell(sheet, 'A17', 'TOTAL', totalRowStyle);
-    _setFormula(sheet, 'B17', 'SUM(B12:B16)', totalRowStyle);
-    _setFormula(sheet, 'C17', 'SUM(C12:C16)', totalRowStyle);
-    _setFormula(sheet, 'D17', 'SUM(D12:D16)', totalRowStyle);
-    _setFormula(sheet, 'E17', 'SUM(E12:E16)', totalRowStyle);
-    _setFormula(sheet, 'F17', 'SUM(F12:F16)', totalRowStyle);
-    _setFormula(sheet, 'G17', 'SUM(G12:G16)', totalRowStyle);
-    _setFormula(sheet, 'H17', 'SUM(H12:H16)', greenTotalStyle);
-    _setFormula(sheet, 'J17', 'SUM(J12:J16)', totalRowStyle);
-    _setFormula(sheet, 'K17', 'SUM(K12:K16)', totalRowStyle);
+    // ============ ROW 17: DATE ============
+    _setCell(sheet, 'G17', 'DATE :', dataStyle);
+    _setCell(sheet, 'H17', count.date, dataStyle);
     
     // ============ ROW 18: Empty ============
     
-    // ============ ROW 19: DATE ============
-    _setCell(sheet, 'G19', 'DATE :', dataStyle);
-    _setCell(sheet, 'H19', count.date, dataStyle);
+    // ============ ROW 19: TAJ Header ============
+    _setCell(sheet, 'A19', 'TAJ', tajHeaderStyle);
+    _setCell(sheet, 'B19', 'PERSON', tajHeaderStyle);
+    _setCell(sheet, 'C19', 'USER', tajHeaderStyle);
+    _setCell(sheet, 'D19', 'PASS', tajHeaderStyle);
+    _setCell(sheet, 'E19', 'ACC #', tajHeaderStyle);
     
-    // ============ ROW 20: Empty ============
-    
-    // ============ ROW 21: TAJ Header ============
-    _setCell(sheet, 'A21', 'TAJ', CellStyle(backgroundColorHex: ExcelColor.fromHexString(_headerGray), bold: true));
-    _setCell(sheet, 'B21', 'PERSON', CellStyle(backgroundColorHex: ExcelColor.fromHexString(_headerGray), bold: true));
-    _setCell(sheet, 'C21', 'USER', CellStyle(backgroundColorHex: ExcelColor.fromHexString(_headerGray), bold: true));
-    _setCell(sheet, 'D21', 'PASS', CellStyle(backgroundColorHex: ExcelColor.fromHexString(_headerGray), bold: true));
-    _setCell(sheet, 'E21', 'ACC #', CellStyle(backgroundColorHex: ExcelColor.fromHexString(_headerGray), bold: true));
-    
-    // ============ ROW 22: TAJ Data (empty for manual entry) ============
-    _setCell(sheet, 'A22', '1', dataStyle);
+    // ============ ROW 20: TAJ Data (empty for manual entry) ============
+    _setCell(sheet, 'A20', '1', dataStyle);
     
     // Set column widths
     sheet.setColumnWidth(0, 12);   // A
-    sheet.setColumnWidth(1, 12);   // B
-    sheet.setColumnWidth(2, 12);   // C
-    sheet.setColumnWidth(3, 12);   // D
-    sheet.setColumnWidth(4, 12);   // E
-    sheet.setColumnWidth(5, 12);   // F
-    sheet.setColumnWidth(6, 12);   // G
+    sheet.setColumnWidth(1, 14);   // B
+    sheet.setColumnWidth(2, 14);   // C
+    sheet.setColumnWidth(3, 14);   // D
+    sheet.setColumnWidth(4, 14);   // E
+    sheet.setColumnWidth(5, 14);   // F
+    sheet.setColumnWidth(6, 14);   // G
     sheet.setColumnWidth(7, 18);   // H - TOTAL
     sheet.setColumnWidth(8, 3);    // I - Gap
     sheet.setColumnWidth(9, 14);   // J - SEND TO HO
     sheet.setColumnWidth(10, 22);  // K - REMAINING BALANCE
+    
+    // Set row heights to 60 pixels (approximately 45 points)
+    for (int i = 1; i <= 20; i++) {
+      sheet.setRowHeight(i, 45);
+    }
     
     return Uint8List.fromList(excel.encode()!);
   }
