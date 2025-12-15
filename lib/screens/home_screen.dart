@@ -5,28 +5,14 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/exchange_rates.dart';
-import '../models/user.dart';
 import '../services/transaction_service.dart';
 import '../services/cash_count_service.dart';
 import '../services/branch_settings_service.dart';
-import '../services/user_service.dart';
-import '../services/branch_cash_service.dart';
-import '../services/sync_service.dart';
 import 'transactions_screen.dart';
 import 'cash_count_history_screen.dart';
-import 'user_management_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  final UserService userService;
-  final BranchCashService branchCashService;
-  final SyncService syncService;
-  
-  const HomeScreen({
-    super.key,
-    required this.userService,
-    required this.branchCashService,
-    required this.syncService,
-  });
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -106,35 +92,6 @@ class _HomeScreenState extends State<HomeScreen> {
         _result = entry['result'];
       });
       _undoIndex--;
-    }
-  }
-
-  Future<void> _confirmLogout() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF2a2a2a),
-        title: const Text('Logout', style: TextStyle(color: Colors.white)),
-        content: Text(
-          'Are you sure you want to logout, ${widget.userService.currentUser?.name}?',
-          style: const TextStyle(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel', style: TextStyle(color: Colors.grey.shade400)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Logout'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true) {
-      await widget.userService.logout();
     }
   }
 
@@ -687,8 +644,6 @@ class _HomeScreenState extends State<HomeScreen> {
             _shortcutRow('F5', 'Exchange calculator'),
             _shortcutRow('F6', 'Windows Calculator'),
             _shortcutRow('F8', 'Branch settings (Safe)'),
-            _shortcutRow('F9', 'User Management (Manager)'),
-            _shortcutRow('F10', 'Logout'),
             _shortcutRow('→ / Ctrl+Z', 'Undo clear'),
             _shortcutRow('Esc', 'Clear input'),
           ],
@@ -2032,8 +1987,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final modeColor = _getModeColor(_selectedMode);
-    final currentUser = widget.userService.currentUser;
-    final hasBranch = widget.userService.hasBranchToday;
     
     return Scaffold(
       backgroundColor: const Color(0xFF1a1a1a),
@@ -2042,127 +1995,6 @@ class _HomeScreenState extends State<HomeScreen> {
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
             child: Column(
               children: [
-              // User Info Bar
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                margin: const EdgeInsets.only(bottom: 8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF252525),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    // User avatar
-                    CircleAvatar(
-                      radius: 12,
-                      backgroundColor: currentUser?.isManager == true 
-                          ? Colors.amber.shade700 
-                          : Colors.blue.shade700,
-                      child: Text(
-                        currentUser?.name.isNotEmpty == true 
-                            ? currentUser!.name[0].toUpperCase() 
-                            : '?',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    // User name and role
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            currentUser?.name ?? 'Guest',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                                decoration: BoxDecoration(
-                                  color: currentUser?.isManager == true 
-                                      ? Colors.amber.shade900 
-                                      : Colors.blue.shade900,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  currentUser?.isManager == true ? 'Manager' : 'User',
-                                  style: TextStyle(
-                                    color: currentUser?.isManager == true 
-                                        ? Colors.amber.shade100 
-                                        : Colors.blue.shade100,
-                                    fontSize: 8,
-                                  ),
-                                ),
-                              ),
-                              if (hasBranch) ...[
-                                const SizedBox(width: 4),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                                  decoration: BoxDecoration(
-                                    color: Colors.green.shade900,
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text(
-                                    'Branch',
-                                    style: TextStyle(
-                                      color: Colors.green.shade100,
-                                      fontSize: 8,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Network status
-                    if (widget.syncService.isRunning) ...[
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.green.shade900.withOpacity(0.5),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.wifi, size: 10, color: Colors.green.shade300),
-                            const SizedBox(width: 3),
-                            Text(
-                              '${widget.syncService.peerCount}',
-                              style: TextStyle(
-                                color: Colors.green.shade300,
-                                fontSize: 10,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                    ],
-                    // Logout button
-                    GestureDetector(
-                      onTap: _confirmLogout,
-                      child: Icon(
-                        Icons.logout,
-                        size: 16,
-                        color: Colors.grey.shade500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
               // Compact Header
               Row(
                 children: [
@@ -2221,21 +2053,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           break;
                         case 'wincalc':
                           Process.run('calc.exe', []);
-                          break;
-                        case 'users':
-                          if (widget.userService.isManager) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => UserManagementScreen(
-                                  userService: widget.userService,
-                                ),
-                              ),
-                            );
-                          }
-                          break;
-                        case 'logout':
-                          _confirmLogout();
                           break;
                       }
                     },
@@ -2315,34 +2132,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             const Text('Win Calculator', style: TextStyle(color: Colors.white, fontSize: 13)),
                             const SizedBox(width: 8),
                             Text('F6', style: TextStyle(color: Colors.grey[600], fontSize: 11)),
-                          ],
-                        ),
-                      ),
-                      if (widget.userService.isManager)
-                        PopupMenuItem(
-                          value: 'users',
-                          height: 36,
-                          child: Row(
-                            children: [
-                              Icon(Icons.people, size: 16, color: Colors.amber),
-                              const SizedBox(width: 8),
-                              const Text('Users', style: TextStyle(color: Colors.white, fontSize: 13)),
-                              const SizedBox(width: 8),
-                              Text('F9', style: TextStyle(color: Colors.grey[600], fontSize: 11)),
-                            ],
-                          ),
-                        ),
-                      const PopupMenuDivider(),
-                      PopupMenuItem(
-                        value: 'logout',
-                        height: 36,
-                        child: Row(
-                          children: [
-                            Icon(Icons.logout, size: 16, color: Colors.red),
-                            const SizedBox(width: 8),
-                            const Text('Logout', style: TextStyle(color: Colors.white, fontSize: 13)),
-                            const SizedBox(width: 8),
-                            Text('F10', style: TextStyle(color: Colors.grey[600], fontSize: 11)),
                           ],
                         ),
                       ),
@@ -2470,28 +2259,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             } else if (event.logicalKey == LogicalKeyboardKey.f8) {
                               // Open branch settings (safe cash)
                               _showBranchSettingsDialog();
-                            } else if (event.logicalKey == LogicalKeyboardKey.f9) {
-                              // User Management (Manager only)
-                              if (widget.userService.isManager) {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => UserManagementScreen(
-                                      userService: widget.userService,
-                                    ),
-                                  ),
-                                );
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Only managers can access User Management'),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
-                              }
-                            } else if (event.logicalKey == LogicalKeyboardKey.f10) {
-                              // Logout
-                              _confirmLogout();
                             }
                           }
                         },

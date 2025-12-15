@@ -6,6 +6,11 @@ import 'package:pos_calculator/main.dart';
 void main() {
   testWidgets('App should load', (WidgetTester tester) async {
     await tester.pumpWidget(const POSCalculatorApp());
-    expect(find.text('POS Currency Calculator'), findsOneWidget);
+    
+    // Wait for async initialization
+    await tester.pumpAndSettle();
+    
+    // Should show the calculator
+    expect(find.text('Cash Calculator'), findsOneWidget);
   });
 }
