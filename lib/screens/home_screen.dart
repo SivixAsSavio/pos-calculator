@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/exchange_rates.dart';
 import '../services/transaction_service.dart';
 import '../services/cash_count_service.dart';
+import '../services/branch_settings_service.dart';
 import 'transactions_screen.dart';
 import 'cash_count_history_screen.dart';
 
@@ -642,6 +643,7 @@ class _HomeScreenState extends State<HomeScreen> {
             _shortcutRow('F4', 'Cash count history'),
             _shortcutRow('F5', 'Exchange calculator'),
             _shortcutRow('F6', 'Windows Calculator'),
+            _shortcutRow('F8', 'Branch settings (Safe)'),
             _shortcutRow('→ / Ctrl+Z', 'Undo clear'),
             _shortcutRow('Esc', 'Clear input'),
           ],
@@ -932,10 +934,358 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _showCashCountDialog() {
+  void _showBranchSettingsDialog() {
+    final pinController = TextEditingController();
+    bool pinVerified = false;
+    String pinError = '';
+    
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          if (!pinVerified) {
+            // PIN Entry Screen
+            return AlertDialog(
+              backgroundColor: const Color(0xFF2a2a2a),
+              title: Row(
+                children: [
+                  const Icon(Icons.lock, color: Colors.orange, size: 20),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Branch Settings (Safe)',
+                    style: TextStyle(color: Colors.white, fontSize: 16),
+                  ),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Enter PIN to edit Branch (Safe) values',
+                    style: TextStyle(color: Colors.grey, fontSize: 13),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: pinController,
+                    obscureText: true,
+                    keyboardType: TextInputType.number,
+                    autofocus: true,
+                    style: const TextStyle(color: Colors.white, fontSize: 18, letterSpacing: 8),
+                    textAlign: TextAlign.center,
+                    decoration: InputDecoration(
+                      hintText: '• • • •',
+                      hintStyle: TextStyle(color: Colors.grey[600], letterSpacing: 8),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.grey[700]!),
+                      ),
+                      focusedBorder: const OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.orange),
+                      ),
+                      errorText: pinError.isNotEmpty ? pinError : null,
+                    ),
+                    onSubmitted: (value) async {
+                      final isValid = await BranchSettingsService.verifyPin(value);
+                      if (isValid) {
+                        setDialogState(() {
+                          pinVerified = true;
+                          pinError = '';
+                        });
+                      } else {
+                        setDialogState(() {
+                          pinError = 'Incorrect PIN';
+                          pinController.clear();
+                        });
+                      }
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    final isValid = await BranchSettingsService.verifyPin(pinController.text);
+                    if (isValid) {
+                      setDialogState(() {
+                        pinVerified = true;
+                        pinError = '';
+                      });
+                    } else {
+                      setDialogState(() {
+                        pinError = 'Incorrect PIN';
+                        pinController.clear();
+                      });
+                    }
+                  },
+                  child: const Text('Verify', style: TextStyle(color: Colors.orange)),
+                ),
+              ],
+            );
+          }
+          
+          // Branch Settings Editor
+          return FutureBuilder<BranchSettings>(
+            future: BranchSettingsService.getSettings(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) {
+                return const AlertDialog(
+                  backgroundColor: Color(0xFF2a2a2a),
+                  content: Center(child: CircularProgressIndicator()),
+                );
+              }
+              
+              final settings = snapshot.data!;
+              final usdControllers = List.generate(6, (i) => TextEditingController(
+                text: settings.usdQty[i] != 0 ? settings.usdQty[i].toString() : '',
+              ));
+              final lbpControllers = List.generate(6, (i) => TextEditingController(
+                text: settings.lbpQty[i] != 0 ? settings.lbpQty[i].toString() : '',
+              ));
+              
+              final usdUnits = [100, 50, 20, 10, 5, 1];
+              final lbpUnits = [100000, 50000, 20000, 10000, 5000, 1000];
+              
+              int calcUsdTotal() {
+                int total = 0;
+                for (int i = 0; i < 6; i++) {
+                  total += (int.tryParse(usdControllers[i].text) ?? 0) * usdUnits[i];
+                }
+                return total;
+              }
+              
+              int calcLbpTotal() {
+                int total = 0;
+                for (int i = 0; i < 6; i++) {
+                  total += (int.tryParse(lbpControllers[i].text) ?? 0) * lbpUnits[i];
+                }
+                return total;
+              }
+              
+              return StatefulBuilder(
+                builder: (context, setInnerState) {
+                  return AlertDialog(
+                    backgroundColor: const Color(0xFF2a2a2a),
+                    title: Row(
+                      children: [
+                        const Icon(Icons.account_balance, color: Colors.orange, size: 20),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Branch (Safe) Cash',
+                          style: TextStyle(color: Colors.white, fontSize: 16),
+                        ),
+                        const Spacer(),
+                        const Icon(Icons.lock_open, color: Colors.green, size: 16),
+                      ],
+                    ),
+                    content: SizedBox(
+                      width: 450,
+                      child: SingleChildScrollView(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // USD Section
+                            Expanded(
+                              child: Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.green.withOpacity(0.3)),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'USD (Safe)',
+                                      style: TextStyle(
+                                        color: Colors.green,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    ...List.generate(6, (i) => Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 2),
+                                      child: Row(
+                                        children: [
+                                          SizedBox(
+                                            width: 40,
+                                            child: Text(
+                                              '\$${usdUnits[i]}',
+                                              style: const TextStyle(color: Colors.green, fontSize: 11),
+                                            ),
+                                          ),
+                                          Expanded(
+                                            child: SizedBox(
+                                              height: 28,
+                                              child: TextField(
+                                                controller: usdControllers[i],
+                                                keyboardType: TextInputType.number,
+                                                style: const TextStyle(color: Colors.white, fontSize: 12),
+                                                textAlign: TextAlign.center,
+                                                decoration: InputDecoration(
+                                                  isDense: true,
+                                                  contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                                                  enabledBorder: OutlineInputBorder(
+                                                    borderSide: BorderSide(color: Colors.grey[700]!),
+                                                  ),
+                                                  focusedBorder: const OutlineInputBorder(
+                                                    borderSide: BorderSide(color: Colors.green),
+                                                  ),
+                                                ),
+                                                onChanged: (_) => setInnerState(() {}),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    )),
+                                    const Divider(color: Colors.grey, height: 16),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        const Text('Total:', style: TextStyle(color: Colors.white, fontSize: 12)),
+                                        Text(
+                                          '\$${_numberFormat.format(calcUsdTotal())}',
+                                          style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 13),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            // LBP Section
+                            Expanded(
+                              child: Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'LBP (Safe)',
+                                      style: TextStyle(
+                                        color: Colors.blue,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    ...List.generate(6, (i) => Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 2),
+                                      child: Row(
+                                        children: [
+                                          SizedBox(
+                                            width: 50,
+                                            child: Text(
+                                              '${_numberFormat.format(lbpUnits[i])}',
+                                              style: const TextStyle(color: Colors.blue, fontSize: 10),
+                                            ),
+                                          ),
+                                          Expanded(
+                                            child: SizedBox(
+                                              height: 28,
+                                              child: TextField(
+                                                controller: lbpControllers[i],
+                                                keyboardType: TextInputType.number,
+                                                style: const TextStyle(color: Colors.white, fontSize: 12),
+                                                textAlign: TextAlign.center,
+                                                decoration: InputDecoration(
+                                                  isDense: true,
+                                                  contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                                                  enabledBorder: OutlineInputBorder(
+                                                    borderSide: BorderSide(color: Colors.grey[700]!),
+                                                  ),
+                                                  focusedBorder: const OutlineInputBorder(
+                                                    borderSide: BorderSide(color: Colors.blue),
+                                                  ),
+                                                ),
+                                                onChanged: (_) => setInnerState(() {}),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    )),
+                                    const Divider(color: Colors.grey, height: 16),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        const Text('Total:', style: TextStyle(color: Colors.white, fontSize: 12)),
+                                        Text(
+                                          '${_numberFormat.format(calcLbpTotal())}',
+                                          style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 13),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+                      ),
+                      TextButton(
+                        onPressed: () async {
+                          final newUsd = List.generate(6, (i) => int.tryParse(usdControllers[i].text) ?? 0);
+                          final newLbp = List.generate(6, (i) => int.tryParse(lbpControllers[i].text) ?? 0);
+                          
+                          await BranchSettingsService.saveSettings(BranchSettings(
+                            usdQty: newUsd,
+                            lbpQty: newLbp,
+                            pin: settings.pin,
+                          ));
+                          
+                          Navigator.pop(context);
+                          
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Branch (Safe) values saved!'),
+                              backgroundColor: Colors.green,
+                              duration: Duration(milliseconds: 800),
+                            ),
+                          );
+                        },
+                        child: const Text('Save', style: TextStyle(color: Colors.green)),
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  void _showCashCountDialog() async {
     // Ensure lists are initialized (safety for hot reload)
     if (_usdQty.isEmpty) _usdQty = <int>[0, 0, 0, 0, 0, 0];
     if (_lbpQty.isEmpty) _lbpQty = <int>[0, 0, 0, 0, 0, 0];
+    
+    // Load branch settings
+    final branchSettings = await BranchSettingsService.getSettings();
+    
+    // User name controller (load from prefs)
+    final prefs = await SharedPreferences.getInstance();
+    final savedUserName = prefs.getString('cash_count_user_name') ?? '';
+    final userNameController = TextEditingController(text: savedUserName);
     
     // USD denominations
     final usdUnits = [100.0, 50.0, 20.0, 10.0, 5.0, 1.0];
@@ -977,14 +1327,14 @@ class _HomeScreenState extends State<HomeScreen> {
             // Store values when calculating
             storeValues();
             
-            // Calculate USD total
+            // Calculate USD total (user drawer only)
             usdTotal = 0;
             for (int i = 0; i < usdUnits.length; i++) {
               final qty = int.tryParse(usdControllers[i].text) ?? 0;
               usdTotal += usdUnits[i] * qty;
             }
             
-            // Calculate LBP total
+            // Calculate LBP total (user drawer only)
             lbpTotal = 0;
             for (int i = 0; i < lbpUnits.length; i++) {
               final qty = int.tryParse(lbpControllers[i].text) ?? 0;
@@ -1162,196 +1512,249 @@ class _HomeScreenState extends State<HomeScreen> {
                   'Cash Count',
                   style: TextStyle(color: Colors.white, fontSize: 16),
                 ),
+                const Spacer(),
+                // Branch totals indicator
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[800],
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    'Branch: \$${_numberFormat.format(branchSettings.usdTotal)} | ${_numberFormat.format(branchSettings.lbpTotal)} LBP',
+                    style: const TextStyle(color: Colors.grey, fontSize: 10),
+                  ),
+                ),
               ],
             ),
             content: SizedBox(
               width: 500,
               child: SingleChildScrollView(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    // USD Section - Tab order 1
-                    Expanded(
-                      child: FocusTraversalGroup(
-                        policy: OrderedTraversalPolicy(),
-                        child: Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.green.withOpacity(0.3)),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'USD Paper',
-                              style: TextStyle(
-                                color: Colors.green,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
+                    // User name input
+                    Row(
+                      children: [
+                        const Icon(Icons.person, color: Colors.orange, size: 18),
+                        const SizedBox(width: 8),
+                        const Text('Your Name:', style: TextStyle(color: Colors.white, fontSize: 13)),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: SizedBox(
+                            height: 32,
+                            child: TextField(
+                              controller: userNameController,
+                              style: const TextStyle(color: Colors.white, fontSize: 13),
+                              textCapitalization: TextCapitalization.characters,
+                              decoration: InputDecoration(
+                                hintText: 'e.g., SAVIO',
+                                hintStyle: TextStyle(color: Colors.grey[600], fontSize: 12),
+                                isDense: true,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                enabledBorder: OutlineInputBorder(
+                                  borderSide: BorderSide(color: Colors.grey[700]!),
+                                ),
+                                focusedBorder: const OutlineInputBorder(
+                                  borderSide: BorderSide(color: Colors.orange),
+                                ),
                               ),
                             ),
-                            const SizedBox(height: 8),
-                            ...List.generate(6, buildUsdRow),
-                            const Divider(color: Colors.grey, height: 16),
-                            // USD Total section
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text('Total:', style: TextStyle(color: Colors.white, fontSize: 12)),
-                                Text(
-                                  '\$${_currencyFormat.format(usdTotal)}',
-                                  style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 13),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            Row(
-                              children: [
-                                const Text('TAJ:', style: TextStyle(color: Colors.orange, fontSize: 12)),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: SizedBox(
-                                    height: 28,
-                                    child: FocusTraversalOrder(
-                                      order: const NumericFocusOrder(10),
-                                      child: TextField(
-                                        controller: usdTajController,
-                                        focusNode: usdTajFocusNode,
-                                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                        style: const TextStyle(color: Colors.white, fontSize: 12),
-                                        decoration: InputDecoration(
-                                          isDense: true,
-                                          contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-                                          prefixText: '\$ ',
-                                          prefixStyle: const TextStyle(color: Colors.orange, fontSize: 12),
-                                          enabledBorder: OutlineInputBorder(
-                                            borderSide: BorderSide(color: Colors.grey[700]!),
-                                          ),
-                                          focusedBorder: const OutlineInputBorder(
-                                            borderSide: BorderSide(color: Colors.orange),
-                                          ),
-                                        ),
-                                        onChanged: (_) => calculate(),
-                                        onSubmitted: (_) {
-                                          // After USD TAJ, go to first LBP field
-                                          lbpFocusNodes[0].requestFocus();
-                                        },
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text('Test:', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                                Text(
-                                  usdTest.isEmpty ? '-' : usdTest,
-                                  style: TextStyle(
-                                    color: usdTest == 'OK ✓' ? Colors.green : (usdTest.startsWith('-') ? Colors.red : Colors.orange),
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
+                          ),
                         ),
-                      ),
-                      ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    // LBP Section - Tab order 2
-                    Expanded(
-                      child: FocusTraversalGroup(
-                        policy: OrderedTraversalPolicy(),
-                        child: Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: Colors.blue.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.blue.withOpacity(0.3)),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'LBP Paper',
-                                style: TextStyle(
-                                  color: Colors.blue,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                ),
+                    const SizedBox(height: 12),
+                    const Divider(color: Colors.grey, height: 1),
+                    const SizedBox(height: 12),
+                    // Cash count sections
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // USD Section - Tab order 1
+                        Expanded(
+                          child: FocusTraversalGroup(
+                            policy: OrderedTraversalPolicy(),
+                            child: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.green.withOpacity(0.3)),
                               ),
-                              const SizedBox(height: 8),
-                              ...List.generate(6, buildLbpRow),
-                              const Divider(color: Colors.grey, height: 16),
-                              // LBP Total section
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text('Total:', style: TextStyle(color: Colors.white, fontSize: 12)),
-                                  Text(
-                                    '${_numberFormat.format(lbpTotal)}',
-                                  style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 13),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            Row(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('TAJ:', style: TextStyle(color: Colors.orange, fontSize: 12)),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: SizedBox(
-                                    height: 28,
-                                    child: FocusTraversalOrder(
-                                      order: const NumericFocusOrder(10),
-                                      child: TextField(
-                                        controller: lbpTajController,
-                                        focusNode: lbpTajFocusNode,
-                                        keyboardType: TextInputType.number,
-                                        style: const TextStyle(color: Colors.white, fontSize: 12),
-                                        decoration: InputDecoration(
-                                          isDense: true,
-                                          contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-                                          enabledBorder: OutlineInputBorder(
-                                            borderSide: BorderSide(color: Colors.grey[700]!),
-                                          ),
-                                          focusedBorder: const OutlineInputBorder(
-                                            borderSide: BorderSide(color: Colors.orange),
-                                          ),
-                                        ),
-                                        onChanged: (_) => calculate(),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text('Test:', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                                Text(
-                                  lbpTest.isEmpty ? '-' : lbpTest,
+                                const Text(
+                                  'USD (Your Drawer)',
                                   style: TextStyle(
-                                    color: lbpTest == 'OK ✓' ? Colors.green : (lbpTest.startsWith('-') ? Colors.red : Colors.orange),
+                                    color: Colors.green,
                                     fontWeight: FontWeight.bold,
                                     fontSize: 13,
                                   ),
                                 ),
+                                const SizedBox(height: 8),
+                                ...List.generate(6, buildUsdRow),
+                                const Divider(color: Colors.grey, height: 16),
+                                // USD Total section
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text('Total:', style: TextStyle(color: Colors.white, fontSize: 12)),
+                                    Text(
+                                      '\$${_currencyFormat.format(usdTotal)}',
+                                      style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 13),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Row(
+                                  children: [
+                                    const Text('TAJ:', style: TextStyle(color: Colors.orange, fontSize: 12)),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: SizedBox(
+                                        height: 28,
+                                        child: FocusTraversalOrder(
+                                          order: const NumericFocusOrder(10),
+                                          child: TextField(
+                                            controller: usdTajController,
+                                            focusNode: usdTajFocusNode,
+                                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                            style: const TextStyle(color: Colors.white, fontSize: 12),
+                                            decoration: InputDecoration(
+                                              isDense: true,
+                                              contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                                              prefixText: '\$ ',
+                                              prefixStyle: const TextStyle(color: Colors.orange, fontSize: 12),
+                                              enabledBorder: OutlineInputBorder(
+                                                borderSide: BorderSide(color: Colors.grey[700]!),
+                                              ),
+                                              focusedBorder: const OutlineInputBorder(
+                                                borderSide: BorderSide(color: Colors.orange),
+                                              ),
+                                            ),
+                                            onChanged: (_) => calculate(),
+                                            onSubmitted: (_) {
+                                              // After USD TAJ, go to first LBP field
+                                              lbpFocusNodes[0].requestFocus();
+                                            },
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text('Test:', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                                    Text(
+                                      usdTest.isEmpty ? '-' : usdTest,
+                                      style: TextStyle(
+                                        color: usdTest == 'OK ✓' ? Colors.green : (usdTest.startsWith('-') ? Colors.red : Colors.orange),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ],
                             ),
-                          ],
+                          ),
+                          ),
                         ),
-                      ),
-                      ),
+                        const SizedBox(width: 12),
+                        // LBP Section - Tab order 2
+                        Expanded(
+                          child: FocusTraversalGroup(
+                            policy: OrderedTraversalPolicy(),
+                            child: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'LBP (Your Drawer)',
+                                    style: TextStyle(
+                                      color: Colors.blue,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  ...List.generate(6, buildLbpRow),
+                                  const Divider(color: Colors.grey, height: 16),
+                                  // LBP Total section
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      const Text('Total:', style: TextStyle(color: Colors.white, fontSize: 12)),
+                                      Text(
+                                        '${_numberFormat.format(lbpTotal)}',
+                                      style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 13),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Row(
+                                  children: [
+                                    const Text('TAJ:', style: TextStyle(color: Colors.orange, fontSize: 12)),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: SizedBox(
+                                        height: 28,
+                                        child: FocusTraversalOrder(
+                                          order: const NumericFocusOrder(10),
+                                          child: TextField(
+                                            controller: lbpTajController,
+                                            focusNode: lbpTajFocusNode,
+                                            keyboardType: TextInputType.number,
+                                            style: const TextStyle(color: Colors.white, fontSize: 12),
+                                            decoration: InputDecoration(
+                                              isDense: true,
+                                              contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                                              enabledBorder: OutlineInputBorder(
+                                                borderSide: BorderSide(color: Colors.grey[700]!),
+                                              ),
+                                              focusedBorder: const OutlineInputBorder(
+                                                borderSide: BorderSide(color: Colors.orange),
+                                              ),
+                                            ),
+                                            onChanged: (_) => calculate(),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text('Test:', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                                    Text(
+                                      lbpTest.isEmpty ? '-' : lbpTest,
+                                      style: TextStyle(
+                                        color: lbpTest == 'OK ✓' ? Colors.green : (lbpTest.startsWith('-') ? Colors.red : Colors.orange),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -1368,6 +1771,13 @@ class _HomeScreenState extends State<HomeScreen> {
               TextButton(
                 onPressed: () async {
                   storeValues();
+                  
+                  // Save user name for next time
+                  final userName = userNameController.text.trim().toUpperCase();
+                  if (userName.isNotEmpty) {
+                    await prefs.setString('cash_count_user_name', userName);
+                  }
+                  
                   // Save cash count to history
                   final now = DateTime.now();
                   final timestamp = '${now.day}/${now.month}/${now.year} ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
@@ -1379,6 +1789,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   final cashCount = CashCount(
                     timestamp: timestamp,
                     date: dateStr,
+                    userName: userName,
+                    branchUsdQty: List.from(branchSettings.usdQty),
+                    branchLbpQty: List.from(branchSettings.lbpQty),
                     usdQty: List.from(_usdQty),
                     lbpQty: List.from(_lbpQty),
                     usdTotal: usdTotal,
@@ -1402,10 +1815,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   Navigator.pop(context);
                   
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Cash count saved!'),
+                    SnackBar(
+                      content: Text('Cash count saved for ${userName.isNotEmpty ? userName : "user"}!'),
                       backgroundColor: Colors.green,
-                      duration: Duration(milliseconds: 800),
+                      duration: const Duration(milliseconds: 800),
                     ),
                   );
                 },
@@ -1701,6 +2114,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             } else if (event.logicalKey == LogicalKeyboardKey.f5) {
                               // Open change calculator
                               _showChangeCalculatorDialog();
+                            } else if (event.logicalKey == LogicalKeyboardKey.f8) {
+                              // Open branch settings (safe cash)
+                              _showBranchSettingsDialog();
                             }
                           }
                         },

@@ -104,14 +104,14 @@ class ExcelExportService {
     _setCell(sheet, 'J3', 'SEND TO HO', headerStyleUSD);
     _setCell(sheet, 'K3', 'REMAINING BALANCE', headerStyleUSD);
     
-    // ============ ROW 4: BRANCH (your data) ============
+    // ============ ROW 4: BRANCH (Safe cash - from settings) ============
     _setCell(sheet, 'A4', 'BRANCH', dataStyle);
-    _setCellInt(sheet, 'B4', count.usdQty[0], dataStyle);
-    _setCellInt(sheet, 'C4', count.usdQty[1], dataStyle);
-    _setCellInt(sheet, 'D4', count.usdQty[2], dataStyle);
-    _setCellInt(sheet, 'E4', count.usdQty[3], dataStyle);
-    _setCellInt(sheet, 'F4', count.usdQty[4], dataStyle);
-    _setCellInt(sheet, 'G4', count.usdQty[5], dataStyle);
+    _setCellInt(sheet, 'B4', count.branchUsdQty[0], dataStyle);
+    _setCellInt(sheet, 'C4', count.branchUsdQty[1], dataStyle);
+    _setCellInt(sheet, 'D4', count.branchUsdQty[2], dataStyle);
+    _setCellInt(sheet, 'E4', count.branchUsdQty[3], dataStyle);
+    _setCellInt(sheet, 'F4', count.branchUsdQty[4], dataStyle);
+    _setCellInt(sheet, 'G4', count.branchUsdQty[5], dataStyle);
     _setFormulaWithFormat(sheet, 'H4', 'B4*100+C4*50+D4*20+E4*10+F4*5+G4*1', dataStyle);
     _setEmptyCell(sheet, 'J4', dataStyle);
     _setFormulaWithFormat(sheet, 'K4', 'H4-J4', dataStyle);
@@ -128,14 +128,15 @@ class ExcelExportService {
     _setEmptyCell(sheet, 'J5', dataStyle);
     _setFormulaWithFormat(sheet, 'K5', 'H5-J5', dataStyle);
     
-    // ============ ROW 6: user (empty row for manual entry) ============
-    _setCell(sheet, 'A6', 'user', dataStyle);
-    _setEmptyCell(sheet, 'B6', dataStyle);
-    _setEmptyCell(sheet, 'C6', dataStyle);
-    _setEmptyCell(sheet, 'D6', dataStyle);
-    _setEmptyCell(sheet, 'E6', dataStyle);
-    _setEmptyCell(sheet, 'F6', dataStyle);
-    _setEmptyCell(sheet, 'G6', dataStyle);
+    // ============ ROW 6: User's drawer cash ============
+    final userName = count.userName.isNotEmpty ? count.userName : 'user';
+    _setCell(sheet, 'A6', userName, dataStyle);
+    _setCellInt(sheet, 'B6', count.usdQty[0], dataStyle);
+    _setCellInt(sheet, 'C6', count.usdQty[1], dataStyle);
+    _setCellInt(sheet, 'D6', count.usdQty[2], dataStyle);
+    _setCellInt(sheet, 'E6', count.usdQty[3], dataStyle);
+    _setCellInt(sheet, 'F6', count.usdQty[4], dataStyle);
+    _setCellInt(sheet, 'G6', count.usdQty[5], dataStyle);
     _setFormulaWithFormat(sheet, 'H6', 'B6*100+C6*50+D6*20+E6*10+F6*5+G6*1', dataStyle);
     _setEmptyCell(sheet, 'J6', dataStyle);
     _setFormulaWithFormat(sheet, 'K6', 'H6-J6', dataStyle);
@@ -178,14 +179,14 @@ class ExcelExportService {
     _setCell(sheet, 'J10', 'SEND TO HO', headerStyleLBP);
     _setCell(sheet, 'K10', 'REMAINING BALANCE', headerStyleLBP);
     
-    // ============ ROW 11: LBP BRANCH (your data) ============
+    // ============ ROW 11: LBP BRANCH (Safe cash - from settings) ============
     _setCell(sheet, 'A11', 'BRANCH', dataStyle);
-    _setCellInt(sheet, 'B11', count.lbpQty[0], dataStyle);
-    _setCellInt(sheet, 'C11', count.lbpQty[1], dataStyle);
-    _setCellInt(sheet, 'D11', count.lbpQty[2], dataStyle);
-    _setCellInt(sheet, 'E11', count.lbpQty[3], dataStyle);
-    _setCellInt(sheet, 'F11', count.lbpQty[4], dataStyle);
-    _setCellInt(sheet, 'G11', count.lbpQty[5], dataStyle);
+    _setCellInt(sheet, 'B11', count.branchLbpQty[0], dataStyle);
+    _setCellInt(sheet, 'C11', count.branchLbpQty[1], dataStyle);
+    _setCellInt(sheet, 'D11', count.branchLbpQty[2], dataStyle);
+    _setCellInt(sheet, 'E11', count.branchLbpQty[3], dataStyle);
+    _setCellInt(sheet, 'F11', count.branchLbpQty[4], dataStyle);
+    _setCellInt(sheet, 'G11', count.branchLbpQty[5], dataStyle);
     _setFormulaWithFormat(sheet, 'H11', 'B11*100000+C11*50000+D11*20000+E11*10000+F11*5000+G11*1000', dataStyle);
     _setEmptyCell(sheet, 'J11', dataStyle);
     _setFormulaWithFormat(sheet, 'K11', 'H11-J11', dataStyle);
@@ -202,14 +203,14 @@ class ExcelExportService {
     _setEmptyCell(sheet, 'J12', dataStyle);
     _setFormulaWithFormat(sheet, 'K12', 'H12-J12', dataStyle);
     
-    // ============ ROW 13: LBP user ============
-    _setCell(sheet, 'A13', 'user', dataStyle);
-    _setEmptyCell(sheet, 'B13', dataStyle);
-    _setEmptyCell(sheet, 'C13', dataStyle);
-    _setEmptyCell(sheet, 'D13', dataStyle);
-    _setEmptyCell(sheet, 'E13', dataStyle);
-    _setEmptyCell(sheet, 'F13', dataStyle);
-    _setEmptyCell(sheet, 'G13', dataStyle);
+    // ============ ROW 13: LBP User's drawer cash ============
+    _setCell(sheet, 'A13', userName, dataStyle);
+    _setCellInt(sheet, 'B13', count.lbpQty[0], dataStyle);
+    _setCellInt(sheet, 'C13', count.lbpQty[1], dataStyle);
+    _setCellInt(sheet, 'D13', count.lbpQty[2], dataStyle);
+    _setCellInt(sheet, 'E13', count.lbpQty[3], dataStyle);
+    _setCellInt(sheet, 'F13', count.lbpQty[4], dataStyle);
+    _setCellInt(sheet, 'G13', count.lbpQty[5], dataStyle);
     _setFormulaWithFormat(sheet, 'H13', 'B13*100000+C13*50000+D13*20000+E13*10000+F13*5000+G13*1000', dataStyle);
     _setEmptyCell(sheet, 'J13', dataStyle);
     _setFormulaWithFormat(sheet, 'K13', 'H13-J13', dataStyle);
