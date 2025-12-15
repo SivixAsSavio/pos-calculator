@@ -104,16 +104,16 @@ class ExcelExportService {
     // ============ ROW 6: JOSEPH (empty row for manual entry) ============
     _setCell(sheet, 'A6', 'JOSEPH', dataStyle);
     _setFormula(sheet, 'H6', 'B6*100+C6*50+D6*20+E6*10+F6*5+G6*1', dataStyle);
-    _setFormula(sheet, 'K6', 'IF(H6=0,"$0",H6-J6)', dataStyle);
+    _setFormula(sheet, 'K6', 'IF(H6=0,"\$0",H6-J6)', dataStyle);
     
     // ============ ROW 7: SAVIO (empty row for manual entry) ============
     _setCell(sheet, 'A7', 'SAVIO', dataStyle);
     _setFormula(sheet, 'H7', 'B7*100+C7*50+D7*20+E7*10+F7*5+G7*1', dataStyle);
-    _setFormula(sheet, 'K7', 'IF(H7=0,"$0",H7-J7)', dataStyle);
+    _setFormula(sheet, 'K7', 'IF(H7=0,"\$0",H7-J7)', dataStyle);
     
     // ============ ROW 8: Empty row ============
     _setFormula(sheet, 'H8', 'B8*100+C8*50+D8*20+E8*10+F8*5+G8*1', dataStyle);
-    _setFormula(sheet, 'K8', 'IF(H8=0,"$0",H8-J8)', dataStyle);
+    _setFormula(sheet, 'K8', 'IF(H8=0,"\$0",H8-J8)', dataStyle);
     
     // ============ ROW 9: USD TOTAL ============
     _setCell(sheet, 'A9', 'TOTAL', totalRowStyle);
