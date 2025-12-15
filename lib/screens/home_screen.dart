@@ -622,6 +622,31 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _handleGlobalKeyEvent(RawKeyDownEvent event) {
+    // Handle F-keys globally (works even when dialogs are not open)
+    if (event.logicalKey == LogicalKeyboardKey.f1) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const TransactionsScreen()),
+      ).then((_) => _loadPendingCount());
+    } else if (event.logicalKey == LogicalKeyboardKey.f2) {
+      _showDrawerBalanceDialog();
+    } else if (event.logicalKey == LogicalKeyboardKey.f3) {
+      _showCashCountDialog();
+    } else if (event.logicalKey == LogicalKeyboardKey.f4) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const CashCountHistoryScreen()),
+      );
+    } else if (event.logicalKey == LogicalKeyboardKey.f5) {
+      _showChangeCalculatorDialog();
+    } else if (event.logicalKey == LogicalKeyboardKey.f6) {
+      Process.run('calc.exe', []);
+    } else if (event.logicalKey == LogicalKeyboardKey.f8) {
+      _showBranchSettingsDialog();
+    }
+  }
+
   void _showShortcutsHelp() {
     showDialog(
       context: context,
@@ -685,6 +710,33 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildTajField(String label, TextEditingController controller) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: TextStyle(color: Colors.grey[400], fontSize: 10)),
+        const SizedBox(height: 4),
+        SizedBox(
+          height: 30,
+          child: TextField(
+            controller: controller,
+            style: const TextStyle(color: Colors.white, fontSize: 12),
+            decoration: InputDecoration(
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              enabledBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.grey[700]!),
+              ),
+              focusedBorder: const OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.orange),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -1044,6 +1096,15 @@ class _HomeScreenState extends State<HomeScreen> {
               final lbpControllers = List.generate(6, (i) => TextEditingController(
                 text: settings.lbpQty[i] != 0 ? settings.lbpQty[i].toString() : '',
               ));
+              // Focus nodes for proper Tab order (USD 0-5, then LBP 0-5)
+              final usdFocusNodes = List.generate(6, (_) => FocusNode());
+              final lbpFocusNodes = List.generate(6, (_) => FocusNode());
+              
+              // TAJ credentials controllers
+              final tajPersonController = TextEditingController(text: settings.tajPerson);
+              final tajUserController = TextEditingController(text: settings.tajUser);
+              final tajPassController = TextEditingController(text: settings.tajPass);
+              final tajAccNumController = TextEditingController(text: settings.tajAccNum);
               
               final usdUnits = [100, 50, 20, 10, 5, 1];
               final lbpUnits = [100000, 50000, 20000, 10000, 5000, 1000];
@@ -1083,153 +1144,228 @@ class _HomeScreenState extends State<HomeScreen> {
                     content: SizedBox(
                       width: 450,
                       child: SingleChildScrollView(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            // USD Section
-                            Expanded(
-                              child: Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: Colors.green.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.green.withOpacity(0.3)),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      'USD (Safe)',
-                                      style: TextStyle(
-                                        color: Colors.green,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 13,
-                                      ),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // USD Section
+                                Expanded(
+                                  child: Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: Colors.green.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: Colors.green.withOpacity(0.3)),
                                     ),
-                                    const SizedBox(height: 8),
-                                    ...List.generate(6, (i) => Padding(
-                                      padding: const EdgeInsets.symmetric(vertical: 2),
-                                      child: Row(
-                                        children: [
-                                          SizedBox(
-                                            width: 40,
-                                            child: Text(
-                                              '\$${usdUnits[i]}',
-                                              style: const TextStyle(color: Colors.green, fontSize: 11),
-                                            ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'USD (Safe)',
+                                          style: TextStyle(
+                                            color: Colors.green,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
                                           ),
-                                          Expanded(
-                                            child: SizedBox(
-                                              height: 28,
-                                              child: TextField(
-                                                controller: usdControllers[i],
-                                                keyboardType: TextInputType.number,
-                                                style: const TextStyle(color: Colors.white, fontSize: 12),
-                                                textAlign: TextAlign.center,
-                                                decoration: InputDecoration(
-                                                  isDense: true,
-                                                  contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-                                                  enabledBorder: OutlineInputBorder(
-                                                    borderSide: BorderSide(color: Colors.grey[700]!),
-                                                  ),
-                                                  focusedBorder: const OutlineInputBorder(
-                                                    borderSide: BorderSide(color: Colors.green),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        ...List.generate(6, (i) => Padding(
+                                          padding: const EdgeInsets.symmetric(vertical: 2),
+                                          child: Row(
+                                            children: [
+                                              SizedBox(
+                                                width: 40,
+                                                child: Text(
+                                                  '\$${usdUnits[i]}',
+                                                  style: const TextStyle(color: Colors.green, fontSize: 11),
+                                                ),
+                                              ),
+                                              Expanded(
+                                                child: SizedBox(
+                                                  height: 28,
+                                                  child: TextField(
+                                                    controller: usdControllers[i],
+                                                    focusNode: usdFocusNodes[i],
+                                                    keyboardType: TextInputType.number,
+                                                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                                                    textAlign: TextAlign.center,
+                                                    decoration: InputDecoration(
+                                                      isDense: true,
+                                                      contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                                                      enabledBorder: OutlineInputBorder(
+                                                        borderSide: BorderSide(color: Colors.grey[700]!),
+                                                      ),
+                                                      focusedBorder: const OutlineInputBorder(
+                                                        borderSide: BorderSide(color: Colors.green),
+                                                      ),
+                                                    ),
+                                                    onChanged: (_) => setInnerState(() {}),
+                                                    onSubmitted: (_) {
+                                                      // Tab to next USD field, then to LBP
+                                                      if (i < 5) {
+                                                        usdFocusNodes[i + 1].requestFocus();
+                                                      } else {
+                                                        lbpFocusNodes[0].requestFocus();
+                                                      }
+                                                    },
                                                   ),
                                                 ),
-                                                onChanged: (_) => setInnerState(() {}),
                                               ),
-                                            ),
+                                            ],
                                           ),
-                                        ],
-                                      ),
-                                    )),
-                                    const Divider(color: Colors.grey, height: 16),
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        const Text('Total:', style: TextStyle(color: Colors.white, fontSize: 12)),
-                                        Text(
-                                          '\$${_numberFormat.format(calcUsdTotal())}',
-                                          style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 13),
+                                        )),
+                                        const Divider(color: Colors.grey, height: 16),
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            const Text('Total:', style: TextStyle(color: Colors.white, fontSize: 12)),
+                                            Text(
+                                              '\$${_numberFormat.format(calcUsdTotal())}',
+                                              style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 13),
+                                            ),
+                                          ],
                                         ),
                                       ],
                                     ),
-                                  ],
+                                  ),
                                 ),
+                                const SizedBox(width: 12),
+                                // LBP Section
+                                Expanded(
+                                  child: Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'LBP (Safe)',
+                                          style: TextStyle(
+                                            color: Colors.blue,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        ...List.generate(6, (i) => Padding(
+                                          padding: const EdgeInsets.symmetric(vertical: 2),
+                                          child: Row(
+                                            children: [
+                                              SizedBox(
+                                                width: 50,
+                                                child: Text(
+                                                  '${_numberFormat.format(lbpUnits[i])}',
+                                                  style: const TextStyle(color: Colors.blue, fontSize: 10),
+                                                ),
+                                              ),
+                                              Expanded(
+                                                child: SizedBox(
+                                                  height: 28,
+                                                  child: TextField(
+                                                    controller: lbpControllers[i],
+                                                    focusNode: lbpFocusNodes[i],
+                                                    keyboardType: TextInputType.number,
+                                                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                                                    textAlign: TextAlign.center,
+                                                    decoration: InputDecoration(
+                                                      isDense: true,
+                                                      contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                                                      enabledBorder: OutlineInputBorder(
+                                                        borderSide: BorderSide(color: Colors.grey[700]!),
+                                                      ),
+                                                      focusedBorder: const OutlineInputBorder(
+                                                        borderSide: BorderSide(color: Colors.blue),
+                                                      ),
+                                                    ),
+                                                    onChanged: (_) => setInnerState(() {}),
+                                                    onSubmitted: (_) {
+                                                      // Tab to next LBP field
+                                                      if (i < 5) {
+                                                        lbpFocusNodes[i + 1].requestFocus();
+                                                      }
+                                                    },
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        )),
+                                        const Divider(color: Colors.grey, height: 16),
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            const Text('Total:', style: TextStyle(color: Colors.white, fontSize: 12)),
+                                            Text(
+                                              '${_numberFormat.format(calcLbpTotal())}',
+                                              style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 13),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            // TAJ Credentials Section
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'TAJ Credentials',
+                                    style: TextStyle(
+                                      color: Colors.orange,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: _buildTajField('Person', tajPersonController),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: _buildTajField('User', tajUserController),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: _buildTajField('Pass', tajPassController),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: _buildTajField('Acc #', tajAccNumController),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(width: 12),
-                            // LBP Section
-                            Expanded(
-                              child: Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.blue.withOpacity(0.3)),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      'LBP (Safe)',
-                                      style: TextStyle(
-                                        color: Colors.blue,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    ...List.generate(6, (i) => Padding(
-                                      padding: const EdgeInsets.symmetric(vertical: 2),
-                                      child: Row(
-                                        children: [
-                                          SizedBox(
-                                            width: 50,
-                                            child: Text(
-                                              '${_numberFormat.format(lbpUnits[i])}',
-                                              style: const TextStyle(color: Colors.blue, fontSize: 10),
-                                            ),
-                                          ),
-                                          Expanded(
-                                            child: SizedBox(
-                                              height: 28,
-                                              child: TextField(
-                                                controller: lbpControllers[i],
-                                                keyboardType: TextInputType.number,
-                                                style: const TextStyle(color: Colors.white, fontSize: 12),
-                                                textAlign: TextAlign.center,
-                                                decoration: InputDecoration(
-                                                  isDense: true,
-                                                  contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-                                                  enabledBorder: OutlineInputBorder(
-                                                    borderSide: BorderSide(color: Colors.grey[700]!),
-                                                  ),
-                                                  focusedBorder: const OutlineInputBorder(
-                                                    borderSide: BorderSide(color: Colors.blue),
-                                                  ),
-                                                ),
-                                                onChanged: (_) => setInnerState(() {}),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    )),
-                                    const Divider(color: Colors.grey, height: 16),
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        const Text('Total:', style: TextStyle(color: Colors.white, fontSize: 12)),
-                                        Text(
-                                          '${_numberFormat.format(calcLbpTotal())}',
-                                          style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 13),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
+                            const SizedBox(height: 12),
+                            // Reset PIN button
+                            TextButton.icon(
+                              onPressed: () => _showResetPinDialog(context),
+                              icon: const Icon(Icons.lock_reset, size: 16, color: Colors.orange),
+                              label: const Text('Reset PIN', style: TextStyle(color: Colors.orange, fontSize: 12)),
                             ),
                           ],
                         ),
@@ -1249,13 +1385,17 @@ class _HomeScreenState extends State<HomeScreen> {
                             usdQty: newUsd,
                             lbpQty: newLbp,
                             pin: settings.pin,
+                            tajPerson: tajPersonController.text.trim(),
+                            tajUser: tajUserController.text.trim(),
+                            tajPass: tajPassController.text.trim(),
+                            tajAccNum: tajAccNumController.text.trim(),
                           ));
                           
                           Navigator.pop(context);
                           
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('Branch (Safe) values saved!'),
+                              content: Text('Branch settings saved!'),
                               backgroundColor: Colors.green,
                               duration: Duration(milliseconds: 800),
                             ),
@@ -1268,6 +1408,130 @@ class _HomeScreenState extends State<HomeScreen> {
                 },
               );
             },
+          );
+        },
+      ),
+    );
+  }
+
+  void _showResetPinDialog(BuildContext parentContext) {
+    final oldPinController = TextEditingController();
+    final newPinController = TextEditingController();
+    final confirmPinController = TextEditingController();
+    String error = '';
+    
+    showDialog(
+      context: parentContext,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            backgroundColor: const Color(0xFF2a2a2a),
+            title: const Row(
+              children: [
+                Icon(Icons.lock_reset, color: Colors.orange, size: 20),
+                SizedBox(width: 8),
+                Text('Reset PIN', style: TextStyle(color: Colors.white, fontSize: 16)),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: oldPinController,
+                  obscureText: true,
+                  keyboardType: TextInputType.number,
+                  autofocus: true,
+                  style: const TextStyle(color: Colors.white, fontSize: 16),
+                  decoration: InputDecoration(
+                    labelText: 'Current PIN',
+                    labelStyle: TextStyle(color: Colors.grey[400]),
+                    enabledBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.grey[700]!),
+                    ),
+                    focusedBorder: const OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.orange),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: newPinController,
+                  obscureText: true,
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(color: Colors.white, fontSize: 16),
+                  decoration: InputDecoration(
+                    labelText: 'New PIN',
+                    labelStyle: TextStyle(color: Colors.grey[400]),
+                    enabledBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.grey[700]!),
+                    ),
+                    focusedBorder: const OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.orange),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: confirmPinController,
+                  obscureText: true,
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(color: Colors.white, fontSize: 16),
+                  decoration: InputDecoration(
+                    labelText: 'Confirm New PIN',
+                    labelStyle: TextStyle(color: Colors.grey[400]),
+                    enabledBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.grey[700]!),
+                    ),
+                    focusedBorder: const OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.orange),
+                    ),
+                  ),
+                ),
+                if (error.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Text(error, style: const TextStyle(color: Colors.red, fontSize: 12)),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+              ),
+              TextButton(
+                onPressed: () async {
+                  // Validate current PIN
+                  final isValid = await BranchSettingsService.verifyPin(oldPinController.text);
+                  if (!isValid) {
+                    setDialogState(() => error = 'Current PIN is incorrect');
+                    return;
+                  }
+                  
+                  // Validate new PIN
+                  if (newPinController.text.isEmpty || newPinController.text.length < 4) {
+                    setDialogState(() => error = 'New PIN must be at least 4 digits');
+                    return;
+                  }
+                  
+                  if (newPinController.text != confirmPinController.text) {
+                    setDialogState(() => error = 'New PINs do not match');
+                    return;
+                  }
+                  
+                  // Update PIN
+                  await BranchSettingsService.changePin(newPinController.text);
+                  
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(parentContext).showSnackBar(
+                    const SnackBar(
+                      content: Text('PIN updated successfully!'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                },
+                child: const Text('Update PIN', style: TextStyle(color: Colors.orange)),
+              ),
+            ],
           );
         },
       ),
@@ -1351,10 +1615,11 @@ class _HomeScreenState extends State<HomeScreen> {
             sendHoUsd = double.tryParse(sendHoUsdController.text.replaceAll(',', '')) ?? 0;
             sendHoLbp = int.tryParse(sendHoLbpController.text.replaceAll(',', '')) ?? 0;
             
-            // USD Test
+            // USD Test (user drawer + branch vs TAJ)
             final usdTaj = double.tryParse(usdTajController.text.replaceAll(',', ''));
             if (usdTaj != null) {
-              final diff = usdTotal - usdTaj;
+              final totalWithBranch = usdTotal + branchSettings.usdTotal;
+              final diff = totalWithBranch - usdTaj;
               if (diff.abs() < 0.01) {
                 usdTest = 'OK ✓';
               } else if (diff < 0) {
@@ -1366,10 +1631,11 @@ class _HomeScreenState extends State<HomeScreen> {
               usdTest = '';
             }
             
-            // LBP Test
+            // LBP Test (user drawer + branch vs TAJ)
             final lbpTaj = int.tryParse(lbpTajController.text.replaceAll(',', ''));
             if (lbpTaj != null) {
-              final diff = lbpTotal - lbpTaj;
+              final totalWithBranch = lbpTotal + branchSettings.lbpTotal;
+              final diff = totalWithBranch - lbpTaj;
               if (diff == 0) {
                 lbpTest = 'OK ✓';
               } else if (diff < 0) {
@@ -1942,6 +2208,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     lbpTest: lbpTest,
                     sendToHoUsd: sendHoUsd,
                     sendToHoLbp: sendHoLbp,
+                    tajPerson: branchSettings.tajPerson,
+                    tajUser: branchSettings.tajUser,
+                    tajPass: branchSettings.tajPass,
+                    tajAccNum: branchSettings.tajAccNum,
                   );
                   
                   await CashCountService.saveCashCount(cashCount);
@@ -1988,51 +2258,59 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final modeColor = _getModeColor(_selectedMode);
     
-    return Scaffold(
-      backgroundColor: const Color(0xFF1a1a1a),
-      body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-            child: Column(
-              children: [
-              // Compact Header
-              Row(
+    return RawKeyboardListener(
+      focusNode: FocusNode()..requestFocus(),
+      autofocus: true,
+      onKey: (event) {
+        if (event is RawKeyDownEvent) {
+          _handleGlobalKeyEvent(event);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFF1a1a1a),
+        body: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+              child: Column(
                 children: [
-                  Text(
-                    'Cash Calculator',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey[400],
+                // Compact Header
+                Row(
+                  children: [
+                    Text(
+                      'Cash Calculator',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey[400],
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 6),
-                  // Help button for shortcuts
-                  GestureDetector(
-                    onTap: () => _showShortcutsHelp(),
-                    child: Icon(
-                      Icons.help_outline,
-                      size: 16,
-                      color: Colors.grey[600],
+                    const SizedBox(width: 6),
+                    // Help button for shortcuts
+                    GestureDetector(
+                      onTap: () => _showShortcutsHelp(),
+                      child: Icon(
+                        Icons.help_outline,
+                        size: 16,
+                        color: Colors.grey[600],
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 6),
-                  // Menu button
-                  PopupMenuButton<String>(
-                    icon: Icon(
-                      Icons.menu,
-                      size: 18,
-                      color: Colors.grey[600],
-                    ),
-                    color: const Color(0xFF2a2a2a),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    onSelected: (value) async {
-                      switch (value) {
-                        case 'transactions':
-                          await Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const TransactionsScreen()),
+                    const SizedBox(width: 6),
+                    // Menu button
+                    PopupMenuButton<String>(
+                      icon: Icon(
+                        Icons.menu,
+                        size: 18,
+                        color: Colors.grey[600],
+                      ),
+                      color: const Color(0xFF2a2a2a),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onSelected: (value) async {
+                        switch (value) {
+                          case 'transactions':
+                            await Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const TransactionsScreen()),
                           );
                           _loadPendingCount();
                           break;
@@ -2053,6 +2331,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           break;
                         case 'wincalc':
                           Process.run('calc.exe', []);
+                          break;
+                        case 'branch':
+                          _showBranchSettingsDialog();
                           break;
                       }
                     },
@@ -2132,6 +2413,20 @@ class _HomeScreenState extends State<HomeScreen> {
                             const Text('Win Calculator', style: TextStyle(color: Colors.white, fontSize: 13)),
                             const SizedBox(width: 8),
                             Text('F6', style: TextStyle(color: Colors.grey[600], fontSize: 11)),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuDivider(),
+                      PopupMenuItem(
+                        value: 'branch',
+                        height: 36,
+                        child: Row(
+                          children: [
+                            Icon(Icons.account_balance, size: 16, color: Colors.orange),
+                            const SizedBox(width: 8),
+                            const Text('Branch Settings', style: TextStyle(color: Colors.white, fontSize: 13)),
+                            const SizedBox(width: 8),
+                            Text('F8', style: TextStyle(color: Colors.grey[600], fontSize: 11)),
                           ],
                         ),
                       ),

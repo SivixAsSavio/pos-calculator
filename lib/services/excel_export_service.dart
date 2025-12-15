@@ -264,8 +264,12 @@ class ExcelExportService {
     _setCell(sheet, 'D19', 'PASS', tajHeaderStyle);
     _setCell(sheet, 'E19', 'ACC #', tajHeaderStyle);
     
-    // ============ ROW 20: TAJ Data (empty for manual entry) ============
+    // ============ ROW 20: TAJ Data ============
     _setCell(sheet, 'A20', '1', dataStyle);
+    _setCell(sheet, 'B20', count.tajPerson, dataStyle);
+    _setCell(sheet, 'C20', count.tajUser, dataStyle);
+    _setCell(sheet, 'D20', count.tajPass, dataStyle);
+    _setCell(sheet, 'E20', count.tajAccNum, dataStyle);
     
     // Set column widths
     sheet.setColumnWidth(0, 12);   // A

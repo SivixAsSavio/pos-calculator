@@ -4,11 +4,19 @@ class BranchSettings {
   final List<int> usdQty; // [100, 50, 20, 10, 5, 1]
   final List<int> lbpQty; // [100000, 50000, 20000, 10000, 5000, 1000]
   final String pin;
+  final String tajPerson;   // TAJ person name
+  final String tajUser;     // TAJ username
+  final String tajPass;     // TAJ password
+  final String tajAccNum;   // TAJ account number
 
   BranchSettings({
     required this.usdQty,
     required this.lbpQty,
     this.pin = '1234',
+    this.tajPerson = '',
+    this.tajUser = '',
+    this.tajPass = '',
+    this.tajAccNum = '',
   });
 
   int get usdTotal {
@@ -33,11 +41,19 @@ class BranchSettings {
     List<int>? usdQty,
     List<int>? lbpQty,
     String? pin,
+    String? tajPerson,
+    String? tajUser,
+    String? tajPass,
+    String? tajAccNum,
   }) {
     return BranchSettings(
       usdQty: usdQty ?? List.from(this.usdQty),
       lbpQty: lbpQty ?? List.from(this.lbpQty),
       pin: pin ?? this.pin,
+      tajPerson: tajPerson ?? this.tajPerson,
+      tajUser: tajUser ?? this.tajUser,
+      tajPass: tajPass ?? this.tajPass,
+      tajAccNum: tajAccNum ?? this.tajAccNum,
     );
   }
 }
@@ -46,6 +62,10 @@ class BranchSettingsService {
   static const String _usdKey = 'branch_usd';
   static const String _lbpKey = 'branch_lbp';
   static const String _pinKey = 'branch_pin';
+  static const String _tajPersonKey = 'branch_taj_person';
+  static const String _tajUserKey = 'branch_taj_user';
+  static const String _tajPassKey = 'branch_taj_pass';
+  static const String _tajAccNumKey = 'branch_taj_accnum';
 
   static BranchSettings? _cached;
 
@@ -58,6 +78,10 @@ class BranchSettingsService {
     final usdStr = prefs.getString(_usdKey);
     final lbpStr = prefs.getString(_lbpKey);
     final pin = prefs.getString(_pinKey) ?? '1234';
+    final tajPerson = prefs.getString(_tajPersonKey) ?? '';
+    final tajUser = prefs.getString(_tajUserKey) ?? '';
+    final tajPass = prefs.getString(_tajPassKey) ?? '';
+    final tajAccNum = prefs.getString(_tajAccNumKey) ?? '';
 
     List<int> usdQty = [0, 0, 0, 0, 0, 0];
     List<int> lbpQty = [0, 0, 0, 0, 0, 0];
@@ -76,7 +100,15 @@ class BranchSettingsService {
       }
     }
 
-    _cached = BranchSettings(usdQty: usdQty, lbpQty: lbpQty, pin: pin);
+    _cached = BranchSettings(
+      usdQty: usdQty, 
+      lbpQty: lbpQty, 
+      pin: pin,
+      tajPerson: tajPerson,
+      tajUser: tajUser,
+      tajPass: tajPass,
+      tajAccNum: tajAccNum,
+    );
     return _cached!;
   }
 
@@ -87,6 +119,10 @@ class BranchSettingsService {
     await prefs.setString(_usdKey, settings.usdQty.join(','));
     await prefs.setString(_lbpKey, settings.lbpQty.join(','));
     await prefs.setString(_pinKey, settings.pin);
+    await prefs.setString(_tajPersonKey, settings.tajPerson);
+    await prefs.setString(_tajUserKey, settings.tajUser);
+    await prefs.setString(_tajPassKey, settings.tajPass);
+    await prefs.setString(_tajAccNumKey, settings.tajAccNum);
     
     _cached = settings;
   }
