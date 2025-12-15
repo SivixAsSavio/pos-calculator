@@ -422,12 +422,4 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       ),
     );
   }
-
-  // Keep old method for reference but unused
-  Widget _buildTransactionCardOld(Transaction t) {
-    Color typeColor;
-    
-    // Empty fallback
-    return const SizedBox();
-  }
 }

@@ -1,7 +1,9 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/exchange_rates.dart';
 import '../services/transaction_service.dart';
 import '../services/cash_count_service.dart';
@@ -24,11 +26,9 @@ class _HomeScreenState extends State<HomeScreen> {
   String _result = '';
   int _pendingCount = 0;
   
-  // Undo support
-  String _lastInput = '';
-  String _lastResult = '';
-  int _lastMode = 0;
-  bool _canUndo = false;
+  // Undo support - persistent history (5 steps)
+  List<Map<String, dynamic>> _undoHistory = [];
+  int _undoIndex = -1;
   
   // TAJ stored values for Cash Count
   double _tajUsd = 0;
@@ -47,6 +47,51 @@ class _HomeScreenState extends State<HomeScreen> {
     _usdQty = <int>[0, 0, 0, 0, 0, 0];
     _lbpQty = <int>[0, 0, 0, 0, 0, 0];
     _loadPendingCount();
+    _loadUndoHistory();
+  }
+  
+  Future<void> _loadUndoHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    final data = prefs.getStringList('undo_history') ?? [];
+    setState(() {
+      _undoHistory = data.map((e) => Map<String, dynamic>.from(jsonDecode(e))).toList();
+      _undoIndex = _undoHistory.length - 1;
+    });
+  }
+  
+  Future<void> _saveToUndoHistory(String input, String result, int mode) async {
+    if (input.isEmpty) return;
+    
+    final entry = {
+      'input': input,
+      'result': result,
+      'mode': mode,
+    };
+    
+    _undoHistory.add(entry);
+    // Keep only last 5
+    if (_undoHistory.length > 5) {
+      _undoHistory.removeAt(0);
+    }
+    _undoIndex = _undoHistory.length - 1;
+    
+    // Persist
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('undo_history', _undoHistory.map((e) => jsonEncode(e)).toList());
+  }
+  
+  void _undo() {
+    if (_undoHistory.isEmpty) return;
+    
+    if (_undoIndex >= 0) {
+      final entry = _undoHistory[_undoIndex];
+      _inputController.text = entry['input'];
+      setState(() {
+        _selectedMode = entry['mode'];
+        _result = entry['result'];
+      });
+      _undoIndex--;
+    }
   }
 
   Future<void> _loadPendingCount() async {
@@ -71,16 +116,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     
     switch (_selectedMode) {
-      case 0: // Pay LBP -> USD to LBP (89,500)
-        final usd = double.tryParse(input);
-        if (usd == null) {
-          setState(() => _result = 'Invalid');
-          return;
-        }
-        final lbp = ExchangeRates.usdToLbpSellUsd(usd);
-        setState(() => _result = 'LBP ${_numberFormat.format(lbp)}');
-        break;
-      case 1: // Get USD <- LBP to USD (89,500)
+      case 0: // Get USD <- LBP to USD (89,500)
         final lbp = int.tryParse(input);
         if (lbp == null) {
           setState(() => _result = 'Invalid');
@@ -88,6 +124,15 @@ class _HomeScreenState extends State<HomeScreen> {
         }
         final usd = ExchangeRates.lbpToUsdBuyUsd(lbp);
         setState(() => _result = 'USD ${_currencyFormat.format(usd)}');
+        break;
+      case 1: // Pay LBP -> USD to LBP (89,500)
+        final usd = double.tryParse(input);
+        if (usd == null) {
+          setState(() => _result = 'Invalid');
+          return;
+        }
+        final lbp = ExchangeRates.usdToLbpSellUsd(usd);
+        setState(() => _result = 'LBP ${_numberFormat.format(lbp)}');
         break;
       case 2: // Charge LBP (89,750) - Customer pays LBP for USD account
         final usd = double.tryParse(input);
@@ -111,14 +156,14 @@ class _HomeScreenState extends State<HomeScreen> {
     
     switch (_selectedMode) {
       case 0:
-        usd = double.parse(input);
-        lbp = ExchangeRates.usdToLbpSellUsd(usd);
-        type = TransactionType.sellUsd;
-        break;
-      case 1:
         lbp = int.parse(input);
         usd = ExchangeRates.lbpToUsdBuyUsd(lbp);
         type = TransactionType.buyUsd;
+        break;
+      case 1:
+        usd = double.parse(input);
+        lbp = ExchangeRates.usdToLbpSellUsd(usd);
+        type = TransactionType.sellUsd;
         break;
       case 2:
         usd = double.parse(input);
@@ -139,6 +184,9 @@ class _HomeScreenState extends State<HomeScreen> {
     
     await TransactionService.saveTransaction(transaction);
     await _loadPendingCount();
+    
+    // Save to undo history before clearing
+    await _saveToUndoHistory(_inputController.text, _result, _selectedMode);
     
     // Clear input after saving
     _inputController.clear();
@@ -168,18 +216,25 @@ class _HomeScreenState extends State<HomeScreen> {
   void _showChangeCalculatorDialog() {
     final lbpAmountController = TextEditingController();
     final usdPaidController = TextEditingController();
+    final usdGiveController = TextEditingController();
     String usdEquivalent = '';
     String changeUsd = '';
     String changeLbp = '';
+    double changeAmount = 0;
+    String remainingLbp = '';
+    // For when customer is short and pays remaining in LBP
+    double shortAmount = 0;
+    String shortLbpAtChargeRate = '';
     
-    // Auto-populate from calculator if in Get USD mode (mode 1)
-    if (_selectedMode == 1 && _inputController.text.isNotEmpty) {
+    // Auto-populate from calculator if in Get USD mode (mode 0)
+    if (_selectedMode == 0 && _inputController.text.isNotEmpty) {
       lbpAmountController.text = _inputController.text;
     }
     
     void calculate() {
       final lbpAmount = int.tryParse(lbpAmountController.text.replaceAll(',', '')) ?? 0;
       final usdPaid = double.tryParse(usdPaidController.text.replaceAll(',', '')) ?? 0;
+      final usdGive = double.tryParse(usdGiveController.text.replaceAll(',', '')) ?? 0;
       
       if (lbpAmount > 0) {
         final usdValue = lbpAmount / ExchangeRates.sellUsdRate;
@@ -187,21 +242,44 @@ class _HomeScreenState extends State<HomeScreen> {
         
         if (usdPaid > 0) {
           final change = usdPaid - usdValue;
+          changeAmount = change;
           if (change >= 0) {
             changeUsd = '\$${_currencyFormat.format(change)}';
             changeLbp = '${_numberFormat.format((change * ExchangeRates.sellUsdRate).round())} LBP';
+            shortAmount = 0;
+            shortLbpAtChargeRate = '';
+            
+            // Calculate remaining after USD given
+            if (usdGive > 0 && usdGive < change) {
+              final remaining = change - usdGive;
+              remainingLbp = '${_numberFormat.format((remaining * ExchangeRates.sellUsdRate).round())} LBP';
+            } else {
+              remainingLbp = '';
+            }
           } else {
-            changeUsd = 'Need \$${_currencyFormat.format(-change)} more';
+            // Customer is SHORT - needs to pay more
+            shortAmount = -change;
+            changeUsd = 'Short \$${_currencyFormat.format(shortAmount)}';
+            // Calculate what they owe in LBP at CHARGE rate (89,750)
+            final lbpOwed = (shortAmount * ExchangeRates.sellLbpRate).round();
+            shortLbpAtChargeRate = '${_numberFormat.format(lbpOwed)} LBP';
             changeLbp = '';
+            remainingLbp = '';
           }
         } else {
           changeUsd = '';
           changeLbp = '';
+          remainingLbp = '';
+          shortAmount = 0;
+          shortLbpAtChargeRate = '';
         }
       } else {
         usdEquivalent = '';
         changeUsd = '';
         changeLbp = '';
+        remainingLbp = '';
+        shortAmount = 0;
+        shortLbpAtChargeRate = '';
       }
     }
     
@@ -221,7 +299,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 const Icon(Icons.currency_exchange, color: Colors.orange, size: 20),
                 const SizedBox(width: 8),
                 const Text(
-                  'Change Calculator',
+                  'Exchange Calculator',
                   style: TextStyle(color: Colors.white, fontSize: 16),
                 ),
               ],
@@ -298,7 +376,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       style: const TextStyle(color: Colors.white, fontSize: 16),
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       inputFormatters: [
-                        FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
+                        FilteringTextInputFormatter.allow(RegExp(r'[\d.,]')),
+                        _ThousandsSeparatorInputFormatter(),
                       ],
                       decoration: InputDecoration(
                         hintText: 'e.g. 20',
@@ -316,28 +395,38 @@ class _HomeScreenState extends State<HomeScreen> {
                         setDialogState(() {});
                       },
                     ),
-                    // Show change
+                    // Show change or short amount
                     if (changeUsd.isNotEmpty) ...[  
                       const SizedBox(height: 12),
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: Colors.orange.withOpacity(0.15),
+                          color: shortAmount > 0 
+                              ? Colors.red.withOpacity(0.15) 
+                              : Colors.orange.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                          border: Border.all(
+                            color: shortAmount > 0 
+                                ? Colors.red.withOpacity(0.3) 
+                                : Colors.orange.withOpacity(0.3)
+                          ),
                         ),
                         child: Column(
                           children: [
-                            const Text(
-                              'CHANGE TO GIVE',
-                              style: TextStyle(color: Colors.orange, fontSize: 11, fontWeight: FontWeight.bold),
+                            Text(
+                              shortAmount > 0 ? 'CUSTOMER OWES' : 'CHANGE TO GIVE',
+                              style: TextStyle(
+                                color: shortAmount > 0 ? Colors.red : Colors.orange, 
+                                fontSize: 11, 
+                                fontWeight: FontWeight.bold
+                              ),
                             ),
                             const SizedBox(height: 6),
                             Text(
                               changeUsd,
                               style: TextStyle(
-                                color: changeUsd.contains('Need') ? Colors.red : Colors.white,
+                                color: shortAmount > 0 ? Colors.red : Colors.white,
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -349,9 +438,89 @@ class _HomeScreenState extends State<HomeScreen> {
                                 style: const TextStyle(color: Colors.blue, fontSize: 16, fontWeight: FontWeight.bold),
                               ),
                             ],
+                            // Show LBP amount at charge rate when customer is short
+                            if (shortAmount > 0 && shortLbpAtChargeRate.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      'Customer pays in LBP (at 89,750):',
+                                      style: TextStyle(color: Colors.grey[400], fontSize: 11),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      shortLbpAtChargeRate,
+                                      style: const TextStyle(color: Colors.blue, fontSize: 18, fontWeight: FontWeight.bold),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
+                    ],
+                    // USD I Give section (when change > 0)
+                    if (changeAmount > 0 && !changeUsd.contains('Need')) ...[  
+                      const SizedBox(height: 12),
+                      Text('USD I Give:', style: TextStyle(color: Colors.grey[400], fontSize: 12)),
+                      const SizedBox(height: 4),
+                      TextField(
+                        controller: usdGiveController,
+                        style: const TextStyle(color: Colors.white, fontSize: 16),
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
+                        ],
+                        decoration: InputDecoration(
+                          hintText: 'e.g. 20 (if you don\'t have exact change)',
+                          hintStyle: TextStyle(color: Colors.grey[700], fontSize: 12),
+                          filled: true,
+                          fillColor: const Color(0xFF1a1a1a),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        ),
+                        onChanged: (_) {
+                          calculate();
+                          setDialogState(() {});
+                        },
+                      ),
+                      // Show remaining in LBP
+                      if (remainingLbp.isNotEmpty) ...[  
+                        const SizedBox(height: 8),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                          ),
+                          child: Column(
+                            children: [
+                              const Text(
+                                'REMAINING IN LBP',
+                                style: TextStyle(color: Colors.blue, fontSize: 11, fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                remainingLbp,
+                                style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
                   ],
                 ),
@@ -362,6 +531,89 @@ class _HomeScreenState extends State<HomeScreen> {
                 onPressed: () => Navigator.pop(context),
                 child: const Text('Close', style: TextStyle(color: Colors.grey)),
               ),
+              // Save button - works for both overpay (change) and underpay (short)
+              if ((changeAmount > 0 && !changeUsd.contains('Short')) || shortAmount > 0)
+                TextButton(
+                  onPressed: () async {
+                    final lbpAmount = int.tryParse(lbpAmountController.text.replaceAll(',', '')) ?? 0;
+                    final usdPaid = double.tryParse(usdPaidController.text.replaceAll(',', '')) ?? 0;
+                    
+                    if (lbpAmount > 0 && usdPaid > 0) {
+                      if (shortAmount > 0) {
+                        // Customer is SHORT - paid less USD, will pay remaining in LBP
+                        // Save TWO transactions:
+                        // 1. Buy USD transaction for the USD received
+                        final lbpForUsd = (usdPaid * ExchangeRates.sellUsdRate).round();
+                        final t1 = Transaction(
+                          id: DateTime.now().millisecondsSinceEpoch.toString(),
+                          timestamp: DateTime.now(),
+                          type: TransactionType.buyUsd,
+                          usdAmount: usdPaid,
+                          lbpAmount: lbpForUsd,
+                        );
+                        await TransactionService.saveTransaction(t1);
+                        
+                        // 2. Charge LBP transaction for the remaining amount at 89,750
+                        final lbpOwed = (shortAmount * ExchangeRates.sellLbpRate).round();
+                        final t2 = Transaction(
+                          id: (DateTime.now().millisecondsSinceEpoch + 1).toString(),
+                          timestamp: DateTime.now(),
+                          type: TransactionType.sellLbp,
+                          usdAmount: shortAmount,
+                          lbpAmount: lbpOwed,
+                        );
+                        await TransactionService.saveTransaction(t2);
+                        
+                        await _loadPendingCount();
+                        await _saveToUndoHistory(
+                          lbpAmountController.text, 
+                          'USD ${_currencyFormat.format(usdPaid)} + ${_numberFormat.format(lbpOwed)} LBP', 
+                          1
+                        );
+                        
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('✓ Saved: \$${_currencyFormat.format(usdPaid)} + ${_numberFormat.format(lbpOwed)} LBP'),
+                            backgroundColor: Colors.green,
+                            duration: const Duration(milliseconds: 1200),
+                          ),
+                        );
+                      } else {
+                        // Customer OVERPAID - save as single Buy USD transaction
+                        final usd = lbpAmount / ExchangeRates.sellUsdRate;
+                        final transaction = Transaction(
+                          id: DateTime.now().millisecondsSinceEpoch.toString(),
+                          timestamp: DateTime.now(),
+                          type: TransactionType.buyUsd,
+                          usdAmount: usd,
+                          lbpAmount: lbpAmount,
+                        );
+                        await TransactionService.saveTransaction(transaction);
+                        await _loadPendingCount();
+                        
+                        await _saveToUndoHistory(
+                          lbpAmountController.text, 
+                          'USD ${_currencyFormat.format(usd)}', 
+                          1
+                        );
+                        
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('✓ Exchange saved'),
+                            backgroundColor: Colors.green,
+                            duration: Duration(milliseconds: 800),
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  child: Text(
+                    shortAmount > 0 ? 'Save (USD + LBP)' : 'Save Exchange', 
+                    style: const TextStyle(color: Colors.orange)
+                  ),
+                ),
             ],
           );
         },
@@ -388,9 +640,9 @@ class _HomeScreenState extends State<HomeScreen> {
             _shortcutRow('F2', 'TAJ balance'),
             _shortcutRow('F3', 'Cash count'),
             _shortcutRow('F4', 'Cash count history'),
-            _shortcutRow('F5', 'Change calculator'),
+            _shortcutRow('F5', 'Exchange calculator'),
+            _shortcutRow('F6', 'Windows Calculator'),
             _shortcutRow('→ / Ctrl+Z', 'Undo clear'),
-            _shortcutRow('Ctrl', 'Open Windows Calculator'),
             _shortcutRow('Esc', 'Clear input'),
           ],
         ),
@@ -1244,6 +1496,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         case 'change':
                           _showChangeCalculatorDialog();
                           break;
+                        case 'wincalc':
+                          Process.run('calc.exe', []);
+                          break;
                       }
                     },
                     itemBuilder: (context) => [
@@ -1306,9 +1561,22 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             Icon(Icons.currency_exchange, size: 16, color: Colors.green),
                             const SizedBox(width: 8),
-                            const Text('Change Calc', style: TextStyle(color: Colors.white, fontSize: 13)),
+                            const Text('Exchange', style: TextStyle(color: Colors.white, fontSize: 13)),
                             const SizedBox(width: 8),
                             Text('F5', style: TextStyle(color: Colors.grey[600], fontSize: 11)),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'wincalc',
+                        height: 36,
+                        child: Row(
+                          children: [
+                            Icon(Icons.calculate_outlined, size: 16, color: Colors.purple),
+                            const SizedBox(width: 8),
+                            const Text('Win Calculator', style: TextStyle(color: Colors.white, fontSize: 13)),
+                            const SizedBox(width: 8),
+                            Text('F6', style: TextStyle(color: Colors.grey[600], fontSize: 11)),
                           ],
                         ),
                       ),
@@ -1362,9 +1630,9 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 10),
               
               // Vertical Mode Selection
-              _buildVerticalModeButton(0, 'Pay LBP', '89,500', 'Customer receives LBP', Colors.orange),
+              _buildVerticalModeButton(0, 'Get USD', '89,500', 'Customer pays LBP → USD', Colors.green),
               const SizedBox(height: 6),
-              _buildVerticalModeButton(1, 'Get USD', '89,500', 'Customer pays LBP → USD', Colors.green),
+              _buildVerticalModeButton(1, 'Pay LBP', '89,500', 'Customer receives LBP', Colors.orange),
               const SizedBox(height: 6),
               _buildVerticalModeButton(2, 'Charge LBP', '89,750', 'USD acc pays in LBP', Colors.blue),
               
@@ -1381,7 +1649,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Row(
                   children: [
                     Text(
-                      _selectedMode == 1 ? 'LBP' : '\$',
+                      _selectedMode == 0 ? 'LBP' : '\$',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -1398,41 +1666,20 @@ class _HomeScreenState extends State<HomeScreen> {
                               _onModeChanged((_selectedMode - 1 + 3) % 3);
                             } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
                               _onModeChanged((_selectedMode + 1) % 3);
-                            } else if (event.logicalKey == LogicalKeyboardKey.controlLeft ||
-                                       event.logicalKey == LogicalKeyboardKey.controlRight) {
+                            } else if (event.logicalKey == LogicalKeyboardKey.f6) {
                               // Open Windows Calculator
                               Process.run('calc.exe', []);
                             } else if (event.logicalKey == LogicalKeyboardKey.escape) {
-                              // Save for undo, then clear
-                              if (_inputController.text.isNotEmpty) {
-                                _lastInput = _inputController.text;
-                                _lastResult = _result;
-                                _lastMode = _selectedMode;
-                                _canUndo = true;
-                              }
+                              // Clear input (will be saved to history on save or when cleared)
                               _inputController.clear();
                               setState(() => _result = '');
                             } else if (event.logicalKey == LogicalKeyboardKey.keyZ &&
                                        (event.isControlPressed)) {
-                              // Undo
-                              if (_canUndo) {
-                                _inputController.text = _lastInput;
-                                setState(() {
-                                  _selectedMode = _lastMode;
-                                  _result = _lastResult;
-                                  _canUndo = false;
-                                });
-                              }
+                              // Undo - go back in history
+                              _undo();
                             } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
                               // Undo with right arrow
-                              if (_canUndo) {
-                                _inputController.text = _lastInput;
-                                setState(() {
-                                  _selectedMode = _lastMode;
-                                  _result = _lastResult;
-                                  _canUndo = false;
-                                });
-                              }
+                              _undo();
                             } else if (event.logicalKey == LogicalKeyboardKey.f1) {
                               // Open transactions
                               Navigator.push(
@@ -1472,7 +1719,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           cursorHeight: 20,
                           decoration: InputDecoration(
-                            hintText: _selectedMode == 1 ? 'LBP amount' : 'USD amount',
+                            hintText: _selectedMode == 0 ? 'LBP amount' : 'USD amount',
                             hintStyle: TextStyle(color: Colors.grey[700], fontSize: 16),
                             border: InputBorder.none,
                             focusedBorder: InputBorder.none,
@@ -1493,12 +1740,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     if (_inputController.text.isNotEmpty)
                       GestureDetector(
                         onTap: () {
-                          // Save for undo
-                          if (_inputController.text.isNotEmpty) {
-                            _lastInput = _inputController.text;
-                            _lastResult = _result;
-                            _lastMode = _selectedMode;
-                            _canUndo = true;
+                          // Save to undo history before clearing
+                          if (_inputController.text.isNotEmpty && _result.isNotEmpty) {
+                            _saveToUndoHistory(_inputController.text, _result, _selectedMode);
                           }
                           _inputController.clear();
                           setState(() => _result = '');
@@ -1711,26 +1955,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Color _getModeColor(int mode) {
     switch (mode) {
-      case 0: return Colors.orange;
-      case 1: return Colors.green;
+      case 0: return Colors.green;
+      case 1: return Colors.orange;
       case 2: return Colors.blue;
       default: return Colors.grey;
     }
   }
 
-  String _getModeLabel(int mode) {
-    switch (mode) {
-      case 0: return 'Customer receives LBP (Rate: 89,500)';
-      case 1: return 'Customer pays LBP → Gets USD (Rate: 89,500)';
-      case 2: return 'Customer pays LBP for USD account (Rate: 89,750)';
-      default: return '';
-    }
-  }
-
   String _getShortModeLabel(int mode) {
     switch (mode) {
-      case 0: return 'Pay customer LBP';
-      case 1: return 'Customer pays LBP';
+      case 0: return 'Customer pays LBP';
+      case 1: return 'Pay customer LBP';
       case 2: return 'Charge LBP (89,750)';
       default: return '';
     }
