@@ -162,8 +162,13 @@ class ExcelExportService {
     _setFormulaWithFormat(sheet, 'F8', 'SUM(F4:F7)', totalRowStyle);
     _setFormulaWithFormat(sheet, 'G8', 'SUM(G4:G7)', totalRowStyle);
     _setFormulaWithFormat(sheet, 'H8', 'SUM(H4:H7)', totalRowStyle);
-    _setFormulaWithFormat(sheet, 'J8', 'SUM(J4:J7)', totalRowStyle);
-    _setFormulaWithFormat(sheet, 'K8', 'SUM(K4:K7)', totalRowStyle);
+    // Send to H.O. - user input value
+    if (count.sendToHoUsd > 0) {
+      _setCellDouble(sheet, 'J8', count.sendToHoUsd, totalRowStyle);
+    } else {
+      _setEmptyCell(sheet, 'J8', totalRowStyle);
+    }
+    _setFormulaWithFormat(sheet, 'K8', 'H8-J8', totalRowStyle);
     
     // ============ ROW 9: Empty ============
     
@@ -236,8 +241,13 @@ class ExcelExportService {
     _setFormulaWithFormat(sheet, 'F15', 'SUM(F11:F14)', totalRowStyle);
     _setFormulaWithFormat(sheet, 'G15', 'SUM(G11:G14)', totalRowStyle);
     _setFormulaWithFormat(sheet, 'H15', 'SUM(H11:H14)', totalRowStyle);
-    _setFormulaWithFormat(sheet, 'J15', 'SUM(J11:J14)', totalRowStyle);
-    _setFormulaWithFormat(sheet, 'K15', 'SUM(K11:K14)', totalRowStyle);
+    // Send to H.O. - user input value
+    if (count.sendToHoLbp > 0) {
+      _setCellInt(sheet, 'J15', count.sendToHoLbp, totalRowStyle);
+    } else {
+      _setEmptyCell(sheet, 'J15', totalRowStyle);
+    }
+    _setFormulaWithFormat(sheet, 'K15', 'H15-J15', totalRowStyle);
     
     // ============ ROW 16: Empty ============
     
@@ -295,6 +305,16 @@ class ExcelExportService {
       sheet.cell(CellIndex.indexByString(cellRef)).value = IntCellValue(value);
     }
     sheet.cell(CellIndex.indexByString(cellRef)).cellStyle = style;
+  }
+  
+  // Helper to set double cell with number formatting
+  static void _setCellDouble(Sheet sheet, String cellRef, double value, CellStyle style) {
+    if (value > 0) {
+      sheet.cell(CellIndex.indexByString(cellRef)).value = DoubleCellValue(value);
+    }
+    sheet.cell(CellIndex.indexByString(cellRef)).cellStyle = style.copyWith(
+      numberFormat: NumFormat.custom(formatCode: '#,##0'),
+    );
   }
   
   // Helper to set formula cell with number formatting (commas)

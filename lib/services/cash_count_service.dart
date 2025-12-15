@@ -15,6 +15,8 @@ class CashCount {
   final int tajLbp;
   final String usdTest;
   final String lbpTest;
+  final double sendToHoUsd;  // Amount sent to Head Office (USD)
+  final int sendToHoLbp;     // Amount sent to Head Office (LBP)
 
   CashCount({
     required this.timestamp,
@@ -30,6 +32,8 @@ class CashCount {
     required this.tajLbp,
     required this.usdTest,
     required this.lbpTest,
+    this.sendToHoUsd = 0,
+    this.sendToHoLbp = 0,
   }) : branchUsdQty = branchUsdQty ?? [0, 0, 0, 0, 0, 0],
        branchLbpQty = branchLbpQty ?? [0, 0, 0, 0, 0, 0];
 
@@ -52,6 +56,10 @@ class CashCount {
     return total;
   }
 
+  // Remaining balance after sending to HO
+  double get remainingUsd => usdTotal - sendToHoUsd;
+  int get remainingLbp => lbpTotal - sendToHoLbp;
+
   Map<String, dynamic> toJson() => {
     'timestamp': timestamp,
     'date': date,
@@ -66,6 +74,8 @@ class CashCount {
     'tajLbp': tajLbp,
     'usdTest': usdTest,
     'lbpTest': lbpTest,
+    'sendToHoUsd': sendToHoUsd,
+    'sendToHoLbp': sendToHoLbp,
   };
 
   factory CashCount.fromJson(Map<String, dynamic> json) => CashCount(
@@ -82,6 +92,8 @@ class CashCount {
     tajLbp: json['tajLbp'],
     usdTest: json['usdTest'],
     lbpTest: json['lbpTest'],
+    sendToHoUsd: (json['sendToHoUsd'] ?? 0).toDouble(),
+    sendToHoLbp: json['sendToHoLbp'] ?? 0,
   );
 }
 

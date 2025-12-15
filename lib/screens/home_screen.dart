@@ -1296,6 +1296,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final usdTajController = TextEditingController(text: _tajUsd != 0 ? _currencyFormat.format(_tajUsd) : '');
     final usdTajFocusNode = FocusNode();
     
+    // Send to H.O. controllers
+    final sendHoUsdController = TextEditingController();
+    final sendHoLbpController = TextEditingController();
+    
     // LBP denominations (no 500, 250)
     final lbpUnits = [100000, 50000, 20000, 10000, 5000, 1000];
     final lbpControllers = List.generate(6, (i) => TextEditingController(
@@ -1307,6 +1311,8 @@ class _HomeScreenState extends State<HomeScreen> {
     
     double usdTotal = 0;
     int lbpTotal = 0;
+    double sendHoUsd = 0;
+    int sendHoLbp = 0;
     String usdTest = '';
     String lbpTest = '';
     bool hasInitialized = false;
@@ -1340,6 +1346,10 @@ class _HomeScreenState extends State<HomeScreen> {
               final qty = int.tryParse(lbpControllers[i].text) ?? 0;
               lbpTotal += lbpUnits[i] * qty;
             }
+            
+            // Get Send to H.O. values
+            sendHoUsd = double.tryParse(sendHoUsdController.text.replaceAll(',', '')) ?? 0;
+            sendHoLbp = int.tryParse(sendHoLbpController.text.replaceAll(',', '')) ?? 0;
             
             // USD Test
             final usdTaj = double.tryParse(usdTajController.text.replaceAll(',', ''));
@@ -1756,6 +1766,136 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 16),
+                    // Send to H.O. Section
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.purple.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.purple.withOpacity(0.3)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.send, color: Colors.purple, size: 16),
+                              SizedBox(width: 8),
+                              Text(
+                                'Send to H.O.',
+                                style: TextStyle(
+                                  color: Colors.purple,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              // USD Send to H.O.
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    const Text('USD:', style: TextStyle(color: Colors.green, fontSize: 12)),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: SizedBox(
+                                        height: 28,
+                                        child: TextField(
+                                          controller: sendHoUsdController,
+                                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                          style: const TextStyle(color: Colors.white, fontSize: 12),
+                                          decoration: InputDecoration(
+                                            isDense: true,
+                                            contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                                            prefixText: '\$ ',
+                                            prefixStyle: const TextStyle(color: Colors.green, fontSize: 12),
+                                            hintText: '0',
+                                            hintStyle: TextStyle(color: Colors.grey[600], fontSize: 12),
+                                            enabledBorder: OutlineInputBorder(
+                                              borderSide: BorderSide(color: Colors.grey[700]!),
+                                            ),
+                                            focusedBorder: const OutlineInputBorder(
+                                              borderSide: BorderSide(color: Colors.purple),
+                                            ),
+                                          ),
+                                          onChanged: (_) => calculate(),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              // LBP Send to H.O.
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    const Text('LBP:', style: TextStyle(color: Colors.blue, fontSize: 12)),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: SizedBox(
+                                        height: 28,
+                                        child: TextField(
+                                          controller: sendHoLbpController,
+                                          keyboardType: TextInputType.number,
+                                          style: const TextStyle(color: Colors.white, fontSize: 12),
+                                          decoration: InputDecoration(
+                                            isDense: true,
+                                            contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                                            hintText: '0',
+                                            hintStyle: TextStyle(color: Colors.grey[600], fontSize: 12),
+                                            enabledBorder: OutlineInputBorder(
+                                              borderSide: BorderSide(color: Colors.grey[700]!),
+                                            ),
+                                            focusedBorder: const OutlineInputBorder(
+                                              borderSide: BorderSide(color: Colors.purple),
+                                            ),
+                                          ),
+                                          onChanged: (_) => calculate(),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          // Remaining balance display
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Remaining:', style: TextStyle(color: Colors.grey, fontSize: 11)),
+                              Row(
+                                children: [
+                                  Text(
+                                    '\$${_currencyFormat.format(usdTotal - sendHoUsd)}',
+                                    style: TextStyle(
+                                      color: (usdTotal - sendHoUsd) < 0 ? Colors.red : Colors.green,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    '${_numberFormat.format(lbpTotal - sendHoLbp)} LBP',
+                                    style: TextStyle(
+                                      color: (lbpTotal - sendHoLbp) < 0 ? Colors.red : Colors.blue,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -1800,6 +1940,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     tajLbp: tajLbp,
                     usdTest: usdTest,
                     lbpTest: lbpTest,
+                    sendToHoUsd: sendHoUsd,
+                    sendToHoLbp: sendHoLbp,
                   );
                   
                   await CashCountService.saveCashCount(cashCount);
