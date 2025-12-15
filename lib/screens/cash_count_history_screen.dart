@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../services/cash_count_service.dart';
+import '../services/excel_export_service.dart';
 
 class CashCountHistoryScreen extends StatefulWidget {
   const CashCountHistoryScreen({super.key});
@@ -72,6 +73,31 @@ class _CashCountHistoryScreenState extends State<CashCountHistoryScreen> {
     );
     if (picked != null) {
       _loadCountsForDate(picked);
+    }
+  }
+
+  Future<void> _exportCashCount(CashCount count) async {
+    final filePath = await ExcelExportService.exportToExcelFormat(count);
+    if (filePath != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Exported to: $filePath'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 4),
+          action: SnackBarAction(
+            label: 'OK',
+            textColor: Colors.white,
+            onPressed: () {},
+          ),
+        ),
+      );
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Export failed'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -178,14 +204,26 @@ class _CashCountHistoryScreenState extends State<CashCountHistoryScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // Header with time only (date is shown in header)
-                                Text(
-                                  count.timestamp.contains(' ') ? count.timestamp.split(' ')[1] : count.timestamp,
-                                  style: const TextStyle(
-                                    color: Colors.orange,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
+                                // Header with time and export button
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      count.timestamp.contains(' ') ? count.timestamp.split(' ')[1] : count.timestamp,
+                                      style: const TextStyle(
+                                        color: Colors.orange,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.file_download, color: Colors.green, size: 20),
+                                      tooltip: 'Export to Excel',
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                      onPressed: () => _exportCashCount(count),
+                                    ),
+                                  ],
                                 ),
                                 const SizedBox(height: 8),
                                 // USD and LBP side by side
