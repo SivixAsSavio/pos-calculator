@@ -97,6 +97,19 @@ class ExcelExportService {
       bottomBorder: _thinBorder,
     );
     
+    // Total row number style (B-G columns) - white background
+    final totalRowNumberStyle = CellStyle(
+      backgroundColorHex: ExcelColor.fromHexString(_white),
+      fontColorHex: ExcelColor.fromHexString(_black),
+      fontSize: 12,
+      horizontalAlign: HorizontalAlign.Center,
+      verticalAlign: VerticalAlign.Center,
+      leftBorder: _thinBorder,
+      rightBorder: _thinBorder,
+      topBorder: _thinBorder,
+      bottomBorder: _thinBorder,
+    );
+    
     final tajHeaderStyle = CellStyle(
       backgroundColorHex: ExcelColor.fromHexString(_blueAccent1Lighter40),
       fontColorHex: ExcelColor.fromHexString(_black),
@@ -177,14 +190,14 @@ class ExcelExportService {
     _setEmptyCell(sheet, 'J7', dataStyleNumber);
     _setFormulaWithFormat(sheet, 'K7', 'H7-J7', dataStyleNumber);
     
-    // ============ ROW 8: USD TOTAL - Blue Accent 1 Lighter 80% ============
+    // ============ ROW 8: USD TOTAL - Blue Accent 1 Lighter 60% ============
     _setCell(sheet, 'A8', 'TOTAL', totalRowStyle);
-    _setFormulaWithFormat(sheet, 'B8', 'SUM(B4:B7)', totalRowStyle);
-    _setFormulaWithFormat(sheet, 'C8', 'SUM(C4:C7)', totalRowStyle);
-    _setFormulaWithFormat(sheet, 'D8', 'SUM(D4:D7)', totalRowStyle);
-    _setFormulaWithFormat(sheet, 'E8', 'SUM(E4:E7)', totalRowStyle);
-    _setFormulaWithFormat(sheet, 'F8', 'SUM(F4:F7)', totalRowStyle);
-    _setFormulaWithFormat(sheet, 'G8', 'SUM(G4:G7)', totalRowStyle);
+    _setFormulaWithFormat(sheet, 'B8', 'SUM(B4:B7)', totalRowNumberStyle);
+    _setFormulaWithFormat(sheet, 'C8', 'SUM(C4:C7)', totalRowNumberStyle);
+    _setFormulaWithFormat(sheet, 'D8', 'SUM(D4:D7)', totalRowNumberStyle);
+    _setFormulaWithFormat(sheet, 'E8', 'SUM(E4:E7)', totalRowNumberStyle);
+    _setFormulaWithFormat(sheet, 'F8', 'SUM(F4:F7)', totalRowNumberStyle);
+    _setFormulaWithFormat(sheet, 'G8', 'SUM(G4:G7)', totalRowNumberStyle);
     _setFormulaWithFormat(sheet, 'H8', 'SUM(H4:H7)', totalRowStyle);
     // Send to H.O. - user input value
     if (count.sendToHoUsd > 0) {
@@ -256,14 +269,14 @@ class ExcelExportService {
     _setEmptyCell(sheet, 'J14', dataStyleNumber);
     _setFormulaWithFormat(sheet, 'K14', 'H14-J14', dataStyleNumber);
     
-    // ============ ROW 15: LBP TOTAL - Blue Accent 1 Lighter 80% ============
+    // ============ ROW 15: LBP TOTAL - Blue Accent 1 Lighter 60% ============
     _setCell(sheet, 'A15', 'TOTAL', totalRowStyle);
-    _setFormulaWithFormat(sheet, 'B15', 'SUM(B11:B14)', totalRowStyle);
-    _setFormulaWithFormat(sheet, 'C15', 'SUM(C11:C14)', totalRowStyle);
-    _setFormulaWithFormat(sheet, 'D15', 'SUM(D11:D14)', totalRowStyle);
-    _setFormulaWithFormat(sheet, 'E15', 'SUM(E11:E14)', totalRowStyle);
-    _setFormulaWithFormat(sheet, 'F15', 'SUM(F11:F14)', totalRowStyle);
-    _setFormulaWithFormat(sheet, 'G15', 'SUM(G11:G14)', totalRowStyle);
+    _setFormulaWithFormat(sheet, 'B15', 'SUM(B11:B14)', totalRowNumberStyle);
+    _setFormulaWithFormat(sheet, 'C15', 'SUM(C11:C14)', totalRowNumberStyle);
+    _setFormulaWithFormat(sheet, 'D15', 'SUM(D11:D14)', totalRowNumberStyle);
+    _setFormulaWithFormat(sheet, 'E15', 'SUM(E11:E14)', totalRowNumberStyle);
+    _setFormulaWithFormat(sheet, 'F15', 'SUM(F11:F14)', totalRowNumberStyle);
+    _setFormulaWithFormat(sheet, 'G15', 'SUM(G11:G14)', totalRowNumberStyle);
     _setFormulaWithFormat(sheet, 'H15', 'SUM(H11:H14)', totalRowStyle);
     // Send to H.O. - user input value
     if (count.sendToHoLbp > 0) {
@@ -296,7 +309,7 @@ class ExcelExportService {
     _setCell(sheet, 'E20', count.tajAccNum, dataStyleNumber);
     
     // Set column widths
-    sheet.setColumnWidth(0, 12);   // A
+    sheet.setColumnWidth(0, 100);   // A - 100 pixels
     sheet.setColumnWidth(1, 14);   // B
     sheet.setColumnWidth(2, 14);   // C
     sheet.setColumnWidth(3, 14);   // D
@@ -305,8 +318,8 @@ class ExcelExportService {
     sheet.setColumnWidth(6, 14);   // G
     sheet.setColumnWidth(7, 18);   // H - TOTAL
     sheet.setColumnWidth(8, 3);    // I - Gap
-    sheet.setColumnWidth(9, 14);   // J - SEND TO HO
-    sheet.setColumnWidth(10, 22);  // K - REMAINING BALANCE
+    sheet.setColumnWidth(9, 110);   // J - SEND TO HO - 110 pixels
+    sheet.setColumnWidth(10, 180);  // K - REMAINING BALANCE - 180 pixels
     
     // Set row heights - all 30 pixels
     for (int i = 1; i <= 20; i++) {

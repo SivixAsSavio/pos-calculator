@@ -1109,6 +1109,39 @@ class _HomeScreenState extends State<HomeScreen> {
               final usdUnits = [100, 50, 20, 10, 5, 1];
               final lbpUnits = [100000, 50000, 20000, 10000, 5000, 1000];
               
+              // Store original values for +/- calculations
+              final usdOriginalValues = List.generate(6, (i) => int.tryParse(usdControllers[i].text) ?? 0);
+              final lbpOriginalValues = List.generate(6, (i) => int.tryParse(lbpControllers[i].text) ?? 0);
+              
+              // Helper function to process +/- expressions in field
+              void processFieldExpression(TextEditingController controller, List<int> originalValues, int index, Function setState) {
+                final text = controller.text.trim();
+                if (text.isEmpty) return;
+                
+                // Check if input starts with + or -
+                if (text.startsWith('+') || text.startsWith('-')) {
+                  final isAdd = text.startsWith('+');
+                  final valueStr = text.substring(1).trim();
+                  final value = int.tryParse(valueStr);
+                  
+                  if (value != null) {
+                    final baseValue = originalValues[index];
+                    final newValue = isAdd ? (baseValue + value) : (baseValue - value);
+                    final finalValue = newValue > 0 ? newValue : 0;
+                    controller.text = finalValue > 0 ? finalValue.toString() : '';
+                    // Update original value for next calculation
+                    originalValues[index] = finalValue;
+                    setState(() {});
+                  }
+                } else {
+                  // If it's a plain number, update the original value
+                  final value = int.tryParse(text);
+                  if (value != null) {
+                    originalValues[index] = value;
+                  }
+                }
+              }
+              
               int calcUsdTotal() {
                 int total = 0;
                 for (int i = 0; i < 6; i++) {
@@ -1188,7 +1221,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                   child: TextField(
                                                     controller: usdControllers[i],
                                                     focusNode: usdFocusNodes[i],
-                                                    keyboardType: TextInputType.number,
+                                                    keyboardType: TextInputType.text, // Allow +/- input
                                                     style: const TextStyle(color: Colors.white, fontSize: 12),
                                                     textAlign: TextAlign.center,
                                                     decoration: InputDecoration(
@@ -1203,6 +1236,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                                     ),
                                                     onChanged: (_) => setInnerState(() {}),
                                                     onSubmitted: (_) {
+                                                      // Process +/- expression
+                                                      processFieldExpression(usdControllers[i], usdOriginalValues, i, setInnerState);
                                                       // Tab to next USD field, then to LBP
                                                       if (i < 5) {
                                                         usdFocusNodes[i + 1].requestFocus();
@@ -1270,7 +1305,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                   child: TextField(
                                                     controller: lbpControllers[i],
                                                     focusNode: lbpFocusNodes[i],
-                                                    keyboardType: TextInputType.number,
+                                                    keyboardType: TextInputType.text, // Allow +/- input
                                                     style: const TextStyle(color: Colors.white, fontSize: 12),
                                                     textAlign: TextAlign.center,
                                                     decoration: InputDecoration(
@@ -1285,6 +1320,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                                     ),
                                                     onChanged: (_) => setInnerState(() {}),
                                                     onSubmitted: (_) {
+                                                      // Process +/- expression
+                                                      processFieldExpression(lbpControllers[i], lbpOriginalValues, i, setInnerState);
                                                       // Tab to next LBP field
                                                       if (i < 5) {
                                                         lbpFocusNodes[i + 1].requestFocus();
@@ -2184,6 +2221,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     await prefs.setString('cash_count_user_name', userName);
                   }
                   
+                  // Get fresh branch settings (in case TAJ data was updated via F8)
+                  final latestBranchSettings = await BranchSettingsService.getSettings();
+                  
                   // Save cash count to history
                   final now = DateTime.now();
                   final timestamp = '${now.day}/${now.month}/${now.year} ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
@@ -2196,8 +2236,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     timestamp: timestamp,
                     date: dateStr,
                     userName: userName,
-                    branchUsdQty: List.from(branchSettings.usdQty),
-                    branchLbpQty: List.from(branchSettings.lbpQty),
+                    branchUsdQty: List.from(latestBranchSettings.usdQty),
+                    branchLbpQty: List.from(latestBranchSettings.lbpQty),
                     usdQty: List.from(_usdQty),
                     lbpQty: List.from(_lbpQty),
                     usdTotal: usdTotal,
@@ -2208,10 +2248,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     lbpTest: lbpTest,
                     sendToHoUsd: sendHoUsd,
                     sendToHoLbp: sendHoLbp,
-                    tajPerson: branchSettings.tajPerson,
-                    tajUser: branchSettings.tajUser,
-                    tajPass: branchSettings.tajPass,
-                    tajAccNum: branchSettings.tajAccNum,
+                    tajPerson: latestBranchSettings.tajPerson,
+                    tajUser: latestBranchSettings.tajUser,
+                    tajPass: latestBranchSettings.tajPass,
+                    tajAccNum: latestBranchSettings.tajAccNum,
                   );
                   
                   await CashCountService.saveCashCount(cashCount);
