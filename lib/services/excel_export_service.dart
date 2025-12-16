@@ -308,8 +308,8 @@ class ExcelExportService {
     _setCell(sheet, 'D20', count.tajPass, dataStyleNumber);
     _setCell(sheet, 'E20', count.tajAccNum, dataStyleNumber);
     
-    // Set column widths
-    sheet.setColumnWidth(0, 100);   // A - 100 pixels
+    // Set column widths (in character widths, not pixels)
+    sheet.setColumnWidth(0, 14);   // A - ~100 pixels
     sheet.setColumnWidth(1, 14);   // B
     sheet.setColumnWidth(2, 14);   // C
     sheet.setColumnWidth(3, 14);   // D
@@ -318,8 +318,8 @@ class ExcelExportService {
     sheet.setColumnWidth(6, 14);   // G
     sheet.setColumnWidth(7, 18);   // H - TOTAL
     sheet.setColumnWidth(8, 3);    // I - Gap
-    sheet.setColumnWidth(9, 110);   // J - SEND TO HO - 110 pixels
-    sheet.setColumnWidth(10, 180);  // K - REMAINING BALANCE - 180 pixels
+    sheet.setColumnWidth(9, 16);   // J - SEND TO HO - ~110 pixels
+    sheet.setColumnWidth(10, 26);  // K - REMAINING BALANCE - ~180 pixels
     
     // Set row heights - all 30 pixels
     for (int i = 1; i <= 20; i++) {

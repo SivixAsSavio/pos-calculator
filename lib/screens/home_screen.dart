@@ -1109,37 +1109,54 @@ class _HomeScreenState extends State<HomeScreen> {
               final usdUnits = [100, 50, 20, 10, 5, 1];
               final lbpUnits = [100000, 50000, 20000, 10000, 5000, 1000];
               
-              // Store original values for +/- calculations
-              final usdOriginalValues = List.generate(6, (i) => int.tryParse(usdControllers[i].text) ?? 0);
-              final lbpOriginalValues = List.generate(6, (i) => int.tryParse(lbpControllers[i].text) ?? 0);
+              // Store values when field gets focus for +/- calculations
+              final usdFocusValues = <int, int>{};
+              final lbpFocusValues = <int, int>{};
               
               // Helper function to process +/- expressions in field
-              void processFieldExpression(TextEditingController controller, List<int> originalValues, int index, Function setState) {
+              void processFieldExpression(TextEditingController controller, Map<int, int> focusValues, int index, Function setState) {
                 final text = controller.text.trim();
-                if (text.isEmpty) return;
+                if (text.isEmpty) {
+                  focusValues.remove(index);
+                  return;
+                }
                 
-                // Check if input starts with + or -
-                if (text.startsWith('+') || text.startsWith('-')) {
-                  final isAdd = text.startsWith('+');
-                  final valueStr = text.substring(1).trim();
-                  final value = int.tryParse(valueStr);
+                // Check if input contains + or - (anywhere in the text)
+                final addMatch = RegExp(r'\+(\d+)$').firstMatch(text);
+                final subMatch = RegExp(r'-(\d+)$').firstMatch(text);
+                
+                if (addMatch != null || subMatch != null) {
+                  final isAdd = addMatch != null;
+                  final match = isAdd ? addMatch : subMatch;
+                  final valueToAddOrSub = int.tryParse(match!.group(1)!) ?? 0;
                   
-                  if (value != null) {
-                    final baseValue = originalValues[index];
-                    final newValue = isAdd ? (baseValue + value) : (baseValue - value);
-                    final finalValue = newValue > 0 ? newValue : 0;
-                    controller.text = finalValue > 0 ? finalValue.toString() : '';
-                    // Update original value for next calculation
-                    originalValues[index] = finalValue;
-                    setState(() {});
+                  // Get base value - either from saved focus value or parse from start of text
+                  int baseValue = focusValues[index] ?? 0;
+                  
+                  // Check if there's a number before the operator
+                  final beforeOp = text.substring(0, match.start).trim();
+                  if (beforeOp.isNotEmpty) {
+                    baseValue = int.tryParse(beforeOp) ?? baseValue;
                   }
+                  
+                  final newValue = isAdd ? (baseValue + valueToAddOrSub) : (baseValue - valueToAddOrSub);
+                  final finalValue = newValue > 0 ? newValue : 0;
+                  controller.text = finalValue > 0 ? finalValue.toString() : '';
+                  focusValues[index] = finalValue;
+                  setState(() {});
                 } else {
-                  // If it's a plain number, update the original value
+                  // If it's a plain number, update the focus value
                   final value = int.tryParse(text);
                   if (value != null) {
-                    originalValues[index] = value;
+                    focusValues[index] = value;
                   }
                 }
+              }
+              
+              // Save current value when field gains focus
+              void onFieldFocus(TextEditingController controller, Map<int, int> focusValues, int index) {
+                final value = int.tryParse(controller.text) ?? 0;
+                focusValues[index] = value;
               }
               
               int calcUsdTotal() {
@@ -1156,6 +1173,20 @@ class _HomeScreenState extends State<HomeScreen> {
                   total += (int.tryParse(lbpControllers[i].text) ?? 0) * lbpUnits[i];
                 }
                 return total;
+              }
+              
+              // Add focus listeners to save values
+              for (int i = 0; i < 6; i++) {
+                usdFocusNodes[i].addListener(() {
+                  if (usdFocusNodes[i].hasFocus) {
+                    onFieldFocus(usdControllers[i], usdFocusValues, i);
+                  }
+                });
+                lbpFocusNodes[i].addListener(() {
+                  if (lbpFocusNodes[i].hasFocus) {
+                    onFieldFocus(lbpControllers[i], lbpFocusValues, i);
+                  }
+                });
               }
               
               return StatefulBuilder(
@@ -1237,7 +1268,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                     onChanged: (_) => setInnerState(() {}),
                                                     onSubmitted: (_) {
                                                       // Process +/- expression
-                                                      processFieldExpression(usdControllers[i], usdOriginalValues, i, setInnerState);
+                                                      processFieldExpression(usdControllers[i], usdFocusValues, i, setInnerState);
                                                       // Tab to next USD field, then to LBP
                                                       if (i < 5) {
                                                         usdFocusNodes[i + 1].requestFocus();
@@ -1321,7 +1352,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                     onChanged: (_) => setInnerState(() {}),
                                                     onSubmitted: (_) {
                                                       // Process +/- expression
-                                                      processFieldExpression(lbpControllers[i], lbpOriginalValues, i, setInnerState);
+                                                      processFieldExpression(lbpControllers[i], lbpFocusValues, i, setInnerState);
                                                       // Tab to next LBP field
                                                       if (i < 5) {
                                                         lbpFocusNodes[i + 1].requestFocus();
