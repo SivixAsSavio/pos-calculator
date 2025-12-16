@@ -385,4 +385,109 @@ class ExcelExportService {
       return null;
     }
   }
+  
+  /// Import data from Excel file and return a map of values
+  static Map<String, dynamic>? importFromExcel(List<int> bytes) {
+    try {
+      final excel = Excel.decodeBytes(bytes);
+      final sheet = excel.tables['TOTAL'];
+      if (sheet == null) return null;
+      
+      // Helper to get cell value as int
+      int getCellInt(String cellRef) {
+        final cell = sheet.cell(CellIndex.indexByString(cellRef));
+        if (cell.value == null) return 0;
+        if (cell.value is IntCellValue) {
+          return (cell.value as IntCellValue).value;
+        }
+        if (cell.value is DoubleCellValue) {
+          return (cell.value as DoubleCellValue).value.toInt();
+        }
+        if (cell.value is TextCellValue) {
+          return int.tryParse((cell.value as TextCellValue).value.toString().replaceAll(',', '')) ?? 0;
+        }
+        return int.tryParse(cell.value.toString().replaceAll(',', '')) ?? 0;
+      }
+      
+      // Helper to get cell value as double
+      double getCellDouble(String cellRef) {
+        final cell = sheet.cell(CellIndex.indexByString(cellRef));
+        if (cell.value == null) return 0;
+        if (cell.value is DoubleCellValue) {
+          return (cell.value as DoubleCellValue).value;
+        }
+        if (cell.value is IntCellValue) {
+          return (cell.value as IntCellValue).value.toDouble();
+        }
+        if (cell.value is TextCellValue) {
+          return double.tryParse((cell.value as TextCellValue).value.toString().replaceAll(',', '')) ?? 0;
+        }
+        return double.tryParse(cell.value.toString().replaceAll(',', '')) ?? 0;
+      }
+      
+      // Helper to get cell value as string
+      String getCellString(String cellRef) {
+        final cell = sheet.cell(CellIndex.indexByString(cellRef));
+        if (cell.value == null) return '';
+        if (cell.value is TextCellValue) {
+          return (cell.value as TextCellValue).value;
+        }
+        return cell.value.toString();
+      }
+      
+      return {
+        // Branch USD quantities (row 4, B-G)
+        'branchUsdQty': [
+          getCellInt('B4'),
+          getCellInt('C4'),
+          getCellInt('D4'),
+          getCellInt('E4'),
+          getCellInt('F4'),
+          getCellInt('G4'),
+        ],
+        // Branch LBP quantities (row 11, B-G)
+        'branchLbpQty': [
+          getCellInt('B11'),
+          getCellInt('C11'),
+          getCellInt('D11'),
+          getCellInt('E11'),
+          getCellInt('F11'),
+          getCellInt('G11'),
+        ],
+        // User USD quantities (row 6, B-G)
+        'usdQty': [
+          getCellInt('B6'),
+          getCellInt('C6'),
+          getCellInt('D6'),
+          getCellInt('E6'),
+          getCellInt('F6'),
+          getCellInt('G6'),
+        ],
+        // User LBP quantities (row 13, B-G)
+        'lbpQty': [
+          getCellInt('B13'),
+          getCellInt('C13'),
+          getCellInt('D13'),
+          getCellInt('E13'),
+          getCellInt('F13'),
+          getCellInt('G13'),
+        ],
+        // User name (row 6, column A)
+        'userName': getCellString('A6'),
+        // Send to HO
+        'sendToHoUsd': getCellDouble('J8'),
+        'sendToHoLbp': getCellInt('J15'),
+        // Date
+        'date': getCellString('H17'),
+        // TAJ credentials (row 20)
+        'tajPerson': getCellString('B20'),
+        'tajUser': getCellString('C20'),
+        'tajPass': getCellString('D20'),
+        'tajAccNum': getCellString('E20'),
+      };
+    } catch (e) {
+      print('Error importing from Excel: $e');
+      return null;
+    }
+  }
 }

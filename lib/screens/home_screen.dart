@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:file_picker/file_picker.dart';
 import '../models/exchange_rates.dart';
 import '../services/transaction_service.dart';
 import '../services/cash_count_service.dart';
 import '../services/branch_settings_service.dart';
+import '../services/excel_export_service.dart';
 import 'transactions_screen.dart';
 import 'cash_count_history_screen.dart';
 
@@ -644,6 +646,8 @@ class _HomeScreenState extends State<HomeScreen> {
       Process.run('calc.exe', []);
     } else if (event.logicalKey == LogicalKeyboardKey.f8) {
       _showBranchSettingsDialog();
+    } else if (event.logicalKey == LogicalKeyboardKey.f9) {
+      _importFromExcel();
     }
   }
 
@@ -669,6 +673,7 @@ class _HomeScreenState extends State<HomeScreen> {
             _shortcutRow('F5', 'Exchange calculator'),
             _shortcutRow('F6', 'Windows Calculator'),
             _shortcutRow('F8', 'Branch settings (Safe)'),
+            _shortcutRow('F9', 'Import Excel'),
             _shortcutRow('→ / Ctrl+Z', 'Undo clear'),
             _shortcutRow('Esc', 'Clear input'),
           ],
@@ -984,6 +989,98 @@ class _HomeScreenState extends State<HomeScreen> {
         },
       ),
     );
+  }
+
+  Future<void> _importFromExcel() async {
+    try {
+      // Pick an Excel file
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['xlsx'],
+        dialogTitle: 'Select Cash Count Excel File',
+      );
+      
+      if (result == null || result.files.isEmpty) return;
+      
+      final file = result.files.first;
+      List<int>? bytes;
+      
+      if (file.bytes != null) {
+        bytes = file.bytes!;
+      } else if (file.path != null) {
+        bytes = await File(file.path!).readAsBytes();
+      }
+      
+      if (bytes == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Could not read file'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+      
+      // Parse Excel
+      final data = ExcelExportService.importFromExcel(bytes);
+      
+      if (data == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Invalid Excel format. Make sure it has a "TOTAL" sheet.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+      
+      // Update Branch Settings (Safe cash + TAJ credentials)
+      final currentSettings = await BranchSettingsService.getSettings();
+      await BranchSettingsService.saveSettings(BranchSettings(
+        usdQty: List<int>.from(data['branchUsdQty']),
+        lbpQty: List<int>.from(data['branchLbpQty']),
+        pin: currentSettings.pin, // Keep the existing PIN
+        tajPerson: data['tajPerson'] ?? '',
+        tajUser: data['tajUser'] ?? '',
+        tajPass: data['tajPass'] ?? '',
+        tajAccNum: data['tajAccNum'] ?? '',
+      ));
+      
+      // Update drawer quantities (for next cash count)
+      setState(() {
+        _usdQty = List<int>.from(data['usdQty']);
+        _lbpQty = List<int>.from(data['lbpQty']);
+      });
+      
+      // Save user name
+      final prefs = await SharedPreferences.getInstance();
+      if (data['userName'] != null && data['userName'].toString().isNotEmpty) {
+        await prefs.setString('cash_count_user_name', data['userName']);
+      }
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Imported: ${file.name}'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Import error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _showBranchSettingsDialog() {
@@ -2406,6 +2503,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         case 'branch':
                           _showBranchSettingsDialog();
                           break;
+                        case 'import':
+                          _importFromExcel();
+                          break;
                       }
                     },
                     itemBuilder: (context) => [
@@ -2498,6 +2598,19 @@ class _HomeScreenState extends State<HomeScreen> {
                             const Text('Branch Settings', style: TextStyle(color: Colors.white, fontSize: 13)),
                             const SizedBox(width: 8),
                             Text('F8', style: TextStyle(color: Colors.grey[600], fontSize: 11)),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'import',
+                        height: 36,
+                        child: Row(
+                          children: [
+                            const Icon(Icons.file_upload, size: 16, color: Colors.cyan),
+                            const SizedBox(width: 8),
+                            const Text('Import Excel', style: TextStyle(color: Colors.white, fontSize: 13)),
+                            const SizedBox(width: 8),
+                            Text('F9', style: TextStyle(color: Colors.grey[600], fontSize: 11)),
                           ],
                         ),
                       ),
