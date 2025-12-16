@@ -8,15 +8,15 @@ import 'excel_export_stub.dart'
     if (dart.library.io) 'excel_export_io.dart' as platform;
 
 class ExcelExportService {
-  // Colors matching the user's spreadsheet exactly
-  static const String _darkBlue = 'FF1F3864';      // Dark blue header for USD
-  static const String _lightBlue = 'FF2E75B6';     // Light blue for LBP header
-  static const String _headerGray = 'FFD0CECE';    // Gray for TOTAL rows
+  // Colors - Blue, Accent 1 variations
+  static const String _blueAccent1Lighter40 = 'FF8FAADC';  // Blue, Accent 1, Lighter 40%
+  static const String _blueAccent1Lighter80 = 'FFD6DCE5';  // Blue, Accent 1, Lighter 80%
   static const String _white = 'FFFFFFFF';
   static const String _black = 'FF000000';
 
   // Border style
   static Border get _thinBorder => Border(borderStyle: BorderStyle.Thin, borderColorHex: ExcelColor.fromHexString(_black));
+  static Border get _noBorder => Border(borderStyle: BorderStyle.None);
 
   /// Generate proper Excel file with FORMULAS matching the exact layout
   static Uint8List generateExcelBytes(CashCount count) {
@@ -27,44 +27,72 @@ class ExcelExportService {
     excel.delete('Sheet1');
     final sheet = excel[sheetName];
     
-    // Styles - all with vertical center alignment and borders
-    final headerStyleUSD = CellStyle(
-      backgroundColorHex: ExcelColor.fromHexString(_darkBlue),
-      fontColorHex: ExcelColor.fromHexString(_white),
+    // Title style - 16px font, bottom and right border only
+    final titleStyle = CellStyle(
       bold: true,
-      horizontalAlign: HorizontalAlign.Center,
+      fontSize: 16,
       verticalAlign: VerticalAlign.Center,
-      leftBorder: _thinBorder,
-      rightBorder: _thinBorder,
-      topBorder: _thinBorder,
+      horizontalAlign: HorizontalAlign.Left,
       bottomBorder: _thinBorder,
+      rightBorder: _thinBorder,
     );
     
-    final headerStyleLBP = CellStyle(
-      backgroundColorHex: ExcelColor.fromHexString(_lightBlue),
-      fontColorHex: ExcelColor.fromHexString(_white),
-      bold: true,
-      horizontalAlign: HorizontalAlign.Center,
-      verticalAlign: VerticalAlign.Center,
-      leftBorder: _thinBorder,
-      rightBorder: _thinBorder,
-      topBorder: _thinBorder,
-      bottomBorder: _thinBorder,
-    );
-    
-    final dataStyle = CellStyle(
-      horizontalAlign: HorizontalAlign.Center,
-      verticalAlign: VerticalAlign.Center,
-      leftBorder: _thinBorder,
-      rightBorder: _thinBorder,
-      topBorder: _thinBorder,
-      bottomBorder: _thinBorder,
-    );
-    
-    final totalRowStyle = CellStyle(
-      backgroundColorHex: ExcelColor.fromHexString(_headerGray),
+    // Header style for denomination labels ($100, $50, LBP 100,000, etc.) - white background, black text
+    final denomHeaderStyle = CellStyle(
+      backgroundColorHex: ExcelColor.fromHexString(_white),
       fontColorHex: ExcelColor.fromHexString(_black),
       bold: true,
+      fontSize: 12,
+      horizontalAlign: HorizontalAlign.Center,
+      verticalAlign: VerticalAlign.Center,
+      leftBorder: _thinBorder,
+      rightBorder: _thinBorder,
+      topBorder: _thinBorder,
+      bottomBorder: _thinBorder,
+    );
+    
+    // Section header style (USD, LBP, TOTAL, SEND TO HO, REMAINING BALANCE) - Blue Accent 1 Lighter 40%
+    final sectionHeaderStyle = CellStyle(
+      backgroundColorHex: ExcelColor.fromHexString(_blueAccent1Lighter40),
+      fontColorHex: ExcelColor.fromHexString(_black),
+      bold: true,
+      fontSize: 12,
+      horizontalAlign: HorizontalAlign.Center,
+      verticalAlign: VerticalAlign.Center,
+      leftBorder: _thinBorder,
+      rightBorder: _thinBorder,
+      topBorder: _thinBorder,
+      bottomBorder: _thinBorder,
+    );
+    
+    // Data style for numbers - 12px font
+    final dataStyleNumber = CellStyle(
+      fontSize: 12,
+      horizontalAlign: HorizontalAlign.Center,
+      verticalAlign: VerticalAlign.Center,
+      leftBorder: _thinBorder,
+      rightBorder: _thinBorder,
+      topBorder: _thinBorder,
+      bottomBorder: _thinBorder,
+    );
+    
+    // Data style for names (BRANCH, COLLECTOR, user) - 11px font
+    final dataStyleName = CellStyle(
+      fontSize: 11,
+      horizontalAlign: HorizontalAlign.Center,
+      verticalAlign: VerticalAlign.Center,
+      leftBorder: _thinBorder,
+      rightBorder: _thinBorder,
+      topBorder: _thinBorder,
+      bottomBorder: _thinBorder,
+    );
+    
+    // Total row style (bottom calculation rows) - Blue Accent 1 Lighter 80%
+    final totalRowStyle = CellStyle(
+      backgroundColorHex: ExcelColor.fromHexString(_blueAccent1Lighter80),
+      fontColorHex: ExcelColor.fromHexString(_black),
+      bold: true,
+      fontSize: 12,
       horizontalAlign: HorizontalAlign.Center,
       verticalAlign: VerticalAlign.Center,
       leftBorder: _thinBorder,
@@ -74,9 +102,10 @@ class ExcelExportService {
     );
     
     final tajHeaderStyle = CellStyle(
-      backgroundColorHex: ExcelColor.fromHexString(_headerGray),
+      backgroundColorHex: ExcelColor.fromHexString(_blueAccent1Lighter40),
       fontColorHex: ExcelColor.fromHexString(_black),
       bold: true,
+      fontSize: 11,
       horizontalAlign: HorizontalAlign.Center,
       verticalAlign: VerticalAlign.Center,
       leftBorder: _thinBorder,
@@ -85,75 +114,75 @@ class ExcelExportService {
       bottomBorder: _thinBorder,
     );
 
-    // ============ ROW 1: CALCULATOR SHEET HEADER ============
+    // ============ ROW 1: CALCULATOR SHEET HEADER - 30px height, 16px text ============
     sheet.cell(CellIndex.indexByString('B1')).value = TextCellValue('CALCULATOR SHEET - TOTAL NAHER IBRAHIM');
-    sheet.cell(CellIndex.indexByString('B1')).cellStyle = CellStyle(bold: true, fontSize: 12, verticalAlign: VerticalAlign.Center);
+    sheet.cell(CellIndex.indexByString('B1')).cellStyle = titleStyle;
     sheet.merge(CellIndex.indexByString('B1'), CellIndex.indexByString('H1'));
     
     // ============ ROW 2: Empty ============
     
     // ============ ROW 3: USD HEADER ============
-    _setCell(sheet, 'A3', 'USD', headerStyleUSD);
-    _setCell(sheet, 'B3', '\$100', headerStyleUSD);
-    _setCell(sheet, 'C3', '\$50', headerStyleUSD);
-    _setCell(sheet, 'D3', '\$20', headerStyleUSD);
-    _setCell(sheet, 'E3', '\$10', headerStyleUSD);
-    _setCell(sheet, 'F3', '\$5', headerStyleUSD);
-    _setCell(sheet, 'G3', '\$1', headerStyleUSD);
-    _setCell(sheet, 'H3', 'TOTAL', headerStyleUSD);
-    _setCell(sheet, 'J3', 'SEND TO HO', headerStyleUSD);
-    _setCell(sheet, 'K3', 'REMAINING BALANCE', headerStyleUSD);
+    _setCell(sheet, 'A3', 'USD', sectionHeaderStyle);
+    _setCell(sheet, 'B3', '\$100', denomHeaderStyle);
+    _setCell(sheet, 'C3', '\$50', denomHeaderStyle);
+    _setCell(sheet, 'D3', '\$20', denomHeaderStyle);
+    _setCell(sheet, 'E3', '\$10', denomHeaderStyle);
+    _setCell(sheet, 'F3', '\$5', denomHeaderStyle);
+    _setCell(sheet, 'G3', '\$1', denomHeaderStyle);
+    _setCell(sheet, 'H3', 'TOTAL', sectionHeaderStyle);
+    _setCell(sheet, 'J3', 'SEND TO HO', sectionHeaderStyle);
+    _setCell(sheet, 'K3', 'REMAINING BALANCE', sectionHeaderStyle);
     
     // ============ ROW 4: BRANCH (Safe cash - from settings) ============
-    _setCell(sheet, 'A4', 'BRANCH', dataStyle);
-    _setCellInt(sheet, 'B4', count.branchUsdQty[0], dataStyle);
-    _setCellInt(sheet, 'C4', count.branchUsdQty[1], dataStyle);
-    _setCellInt(sheet, 'D4', count.branchUsdQty[2], dataStyle);
-    _setCellInt(sheet, 'E4', count.branchUsdQty[3], dataStyle);
-    _setCellInt(sheet, 'F4', count.branchUsdQty[4], dataStyle);
-    _setCellInt(sheet, 'G4', count.branchUsdQty[5], dataStyle);
-    _setFormulaWithFormat(sheet, 'H4', 'B4*100+C4*50+D4*20+E4*10+F4*5+G4*1', dataStyle);
-    _setEmptyCell(sheet, 'J4', dataStyle);
-    _setFormulaWithFormat(sheet, 'K4', 'H4-J4', dataStyle);
+    _setCell(sheet, 'A4', 'BRANCH', dataStyleName);
+    _setCellInt(sheet, 'B4', count.branchUsdQty[0], dataStyleNumber);
+    _setCellInt(sheet, 'C4', count.branchUsdQty[1], dataStyleNumber);
+    _setCellInt(sheet, 'D4', count.branchUsdQty[2], dataStyleNumber);
+    _setCellInt(sheet, 'E4', count.branchUsdQty[3], dataStyleNumber);
+    _setCellInt(sheet, 'F4', count.branchUsdQty[4], dataStyleNumber);
+    _setCellInt(sheet, 'G4', count.branchUsdQty[5], dataStyleNumber);
+    _setFormulaWithFormat(sheet, 'H4', 'B4*100+C4*50+D4*20+E4*10+F4*5+G4*1', dataStyleNumber);
+    _setEmptyCell(sheet, 'J4', dataStyleNumber);
+    _setFormulaWithFormat(sheet, 'K4', 'H4-J4', dataStyleNumber);
     
     // ============ ROW 5: COLLECTOR ============
-    _setCell(sheet, 'A5', 'COLLECTOR', dataStyle);
-    _setEmptyCell(sheet, 'B5', dataStyle);
-    _setEmptyCell(sheet, 'C5', dataStyle);
-    _setEmptyCell(sheet, 'D5', dataStyle);
-    _setEmptyCell(sheet, 'E5', dataStyle);
-    _setEmptyCell(sheet, 'F5', dataStyle);
-    _setEmptyCell(sheet, 'G5', dataStyle);
-    _setFormulaWithFormat(sheet, 'H5', 'B5*100+C5*50+D5*20+E5*10+F5*5+G5*1', dataStyle);
-    _setEmptyCell(sheet, 'J5', dataStyle);
-    _setFormulaWithFormat(sheet, 'K5', 'H5-J5', dataStyle);
+    _setCell(sheet, 'A5', 'COLLECTOR', dataStyleName);
+    _setEmptyCell(sheet, 'B5', dataStyleNumber);
+    _setEmptyCell(sheet, 'C5', dataStyleNumber);
+    _setEmptyCell(sheet, 'D5', dataStyleNumber);
+    _setEmptyCell(sheet, 'E5', dataStyleNumber);
+    _setEmptyCell(sheet, 'F5', dataStyleNumber);
+    _setEmptyCell(sheet, 'G5', dataStyleNumber);
+    _setFormulaWithFormat(sheet, 'H5', 'B5*100+C5*50+D5*20+E5*10+F5*5+G5*1', dataStyleNumber);
+    _setEmptyCell(sheet, 'J5', dataStyleNumber);
+    _setFormulaWithFormat(sheet, 'K5', 'H5-J5', dataStyleNumber);
     
     // ============ ROW 6: User's drawer cash ============
     final userName = count.userName.isNotEmpty ? count.userName : 'user';
-    _setCell(sheet, 'A6', userName, dataStyle);
-    _setCellInt(sheet, 'B6', count.usdQty[0], dataStyle);
-    _setCellInt(sheet, 'C6', count.usdQty[1], dataStyle);
-    _setCellInt(sheet, 'D6', count.usdQty[2], dataStyle);
-    _setCellInt(sheet, 'E6', count.usdQty[3], dataStyle);
-    _setCellInt(sheet, 'F6', count.usdQty[4], dataStyle);
-    _setCellInt(sheet, 'G6', count.usdQty[5], dataStyle);
-    _setFormulaWithFormat(sheet, 'H6', 'B6*100+C6*50+D6*20+E6*10+F6*5+G6*1', dataStyle);
-    _setEmptyCell(sheet, 'J6', dataStyle);
-    _setFormulaWithFormat(sheet, 'K6', 'H6-J6', dataStyle);
+    _setCell(sheet, 'A6', userName, dataStyleName);
+    _setCellInt(sheet, 'B6', count.usdQty[0], dataStyleNumber);
+    _setCellInt(sheet, 'C6', count.usdQty[1], dataStyleNumber);
+    _setCellInt(sheet, 'D6', count.usdQty[2], dataStyleNumber);
+    _setCellInt(sheet, 'E6', count.usdQty[3], dataStyleNumber);
+    _setCellInt(sheet, 'F6', count.usdQty[4], dataStyleNumber);
+    _setCellInt(sheet, 'G6', count.usdQty[5], dataStyleNumber);
+    _setFormulaWithFormat(sheet, 'H6', 'B6*100+C6*50+D6*20+E6*10+F6*5+G6*1', dataStyleNumber);
+    _setEmptyCell(sheet, 'J6', dataStyleNumber);
+    _setFormulaWithFormat(sheet, 'K6', 'H6-J6', dataStyleNumber);
     
     // ============ ROW 7: Empty row ============
-    _setEmptyCell(sheet, 'A7', dataStyle);
-    _setEmptyCell(sheet, 'B7', dataStyle);
-    _setEmptyCell(sheet, 'C7', dataStyle);
-    _setEmptyCell(sheet, 'D7', dataStyle);
-    _setEmptyCell(sheet, 'E7', dataStyle);
-    _setEmptyCell(sheet, 'F7', dataStyle);
-    _setEmptyCell(sheet, 'G7', dataStyle);
-    _setFormulaWithFormat(sheet, 'H7', 'B7*100+C7*50+D7*20+E7*10+F7*5+G7*1', dataStyle);
-    _setEmptyCell(sheet, 'J7', dataStyle);
-    _setFormulaWithFormat(sheet, 'K7', 'H7-J7', dataStyle);
+    _setEmptyCell(sheet, 'A7', dataStyleNumber);
+    _setEmptyCell(sheet, 'B7', dataStyleNumber);
+    _setEmptyCell(sheet, 'C7', dataStyleNumber);
+    _setEmptyCell(sheet, 'D7', dataStyleNumber);
+    _setEmptyCell(sheet, 'E7', dataStyleNumber);
+    _setEmptyCell(sheet, 'F7', dataStyleNumber);
+    _setEmptyCell(sheet, 'G7', dataStyleNumber);
+    _setFormulaWithFormat(sheet, 'H7', 'B7*100+C7*50+D7*20+E7*10+F7*5+G7*1', dataStyleNumber);
+    _setEmptyCell(sheet, 'J7', dataStyleNumber);
+    _setFormulaWithFormat(sheet, 'K7', 'H7-J7', dataStyleNumber);
     
-    // ============ ROW 8: USD TOTAL ============
+    // ============ ROW 8: USD TOTAL - Blue Accent 1 Lighter 80% ============
     _setCell(sheet, 'A8', 'TOTAL', totalRowStyle);
     _setFormulaWithFormat(sheet, 'B8', 'SUM(B4:B7)', totalRowStyle);
     _setFormulaWithFormat(sheet, 'C8', 'SUM(C4:C7)', totalRowStyle);
@@ -173,66 +202,66 @@ class ExcelExportService {
     // ============ ROW 9: Empty ============
     
     // ============ ROW 10: LBP HEADER ============
-    _setCell(sheet, 'A10', 'LBP', headerStyleLBP);
-    _setCell(sheet, 'B10', 'LBP 100,000', headerStyleLBP);
-    _setCell(sheet, 'C10', 'LBP 50,000', headerStyleLBP);
-    _setCell(sheet, 'D10', 'LBP 20,000', headerStyleLBP);
-    _setCell(sheet, 'E10', 'LBP 10,000', headerStyleLBP);
-    _setCell(sheet, 'F10', 'LBP 5,000', headerStyleLBP);
-    _setCell(sheet, 'G10', 'LBP 1,000', headerStyleLBP);
-    _setCell(sheet, 'H10', 'TOTAL', headerStyleLBP);
-    _setCell(sheet, 'J10', 'SEND TO HO', headerStyleLBP);
-    _setCell(sheet, 'K10', 'REMAINING BALANCE', headerStyleLBP);
+    _setCell(sheet, 'A10', 'LBP', sectionHeaderStyle);
+    _setCell(sheet, 'B10', 'LBP 100,000', denomHeaderStyle);
+    _setCell(sheet, 'C10', 'LBP 50,000', denomHeaderStyle);
+    _setCell(sheet, 'D10', 'LBP 20,000', denomHeaderStyle);
+    _setCell(sheet, 'E10', 'LBP 10,000', denomHeaderStyle);
+    _setCell(sheet, 'F10', 'LBP 5,000', denomHeaderStyle);
+    _setCell(sheet, 'G10', 'LBP 1,000', denomHeaderStyle);
+    _setCell(sheet, 'H10', 'TOTAL', sectionHeaderStyle);
+    _setCell(sheet, 'J10', 'SEND TO HO', sectionHeaderStyle);
+    _setCell(sheet, 'K10', 'REMAINING BALANCE', sectionHeaderStyle);
     
     // ============ ROW 11: LBP BRANCH (Safe cash - from settings) ============
-    _setCell(sheet, 'A11', 'BRANCH', dataStyle);
-    _setCellInt(sheet, 'B11', count.branchLbpQty[0], dataStyle);
-    _setCellInt(sheet, 'C11', count.branchLbpQty[1], dataStyle);
-    _setCellInt(sheet, 'D11', count.branchLbpQty[2], dataStyle);
-    _setCellInt(sheet, 'E11', count.branchLbpQty[3], dataStyle);
-    _setCellInt(sheet, 'F11', count.branchLbpQty[4], dataStyle);
-    _setCellInt(sheet, 'G11', count.branchLbpQty[5], dataStyle);
-    _setFormulaWithFormat(sheet, 'H11', 'B11*100000+C11*50000+D11*20000+E11*10000+F11*5000+G11*1000', dataStyle);
-    _setEmptyCell(sheet, 'J11', dataStyle);
-    _setFormulaWithFormat(sheet, 'K11', 'H11-J11', dataStyle);
+    _setCell(sheet, 'A11', 'BRANCH', dataStyleName);
+    _setCellInt(sheet, 'B11', count.branchLbpQty[0], dataStyleNumber);
+    _setCellInt(sheet, 'C11', count.branchLbpQty[1], dataStyleNumber);
+    _setCellInt(sheet, 'D11', count.branchLbpQty[2], dataStyleNumber);
+    _setCellInt(sheet, 'E11', count.branchLbpQty[3], dataStyleNumber);
+    _setCellInt(sheet, 'F11', count.branchLbpQty[4], dataStyleNumber);
+    _setCellInt(sheet, 'G11', count.branchLbpQty[5], dataStyleNumber);
+    _setFormulaWithFormat(sheet, 'H11', 'B11*100000+C11*50000+D11*20000+E11*10000+F11*5000+G11*1000', dataStyleNumber);
+    _setEmptyCell(sheet, 'J11', dataStyleNumber);
+    _setFormulaWithFormat(sheet, 'K11', 'H11-J11', dataStyleNumber);
     
     // ============ ROW 12: LBP COLLECTOR ============
-    _setCell(sheet, 'A12', 'COLLECTOR', dataStyle);
-    _setEmptyCell(sheet, 'B12', dataStyle);
-    _setEmptyCell(sheet, 'C12', dataStyle);
-    _setEmptyCell(sheet, 'D12', dataStyle);
-    _setEmptyCell(sheet, 'E12', dataStyle);
-    _setEmptyCell(sheet, 'F12', dataStyle);
-    _setEmptyCell(sheet, 'G12', dataStyle);
-    _setFormulaWithFormat(sheet, 'H12', 'B12*100000+C12*50000+D12*20000+E12*10000+F12*5000+G12*1000', dataStyle);
-    _setEmptyCell(sheet, 'J12', dataStyle);
-    _setFormulaWithFormat(sheet, 'K12', 'H12-J12', dataStyle);
+    _setCell(sheet, 'A12', 'COLLECTOR', dataStyleName);
+    _setEmptyCell(sheet, 'B12', dataStyleNumber);
+    _setEmptyCell(sheet, 'C12', dataStyleNumber);
+    _setEmptyCell(sheet, 'D12', dataStyleNumber);
+    _setEmptyCell(sheet, 'E12', dataStyleNumber);
+    _setEmptyCell(sheet, 'F12', dataStyleNumber);
+    _setEmptyCell(sheet, 'G12', dataStyleNumber);
+    _setFormulaWithFormat(sheet, 'H12', 'B12*100000+C12*50000+D12*20000+E12*10000+F12*5000+G12*1000', dataStyleNumber);
+    _setEmptyCell(sheet, 'J12', dataStyleNumber);
+    _setFormulaWithFormat(sheet, 'K12', 'H12-J12', dataStyleNumber);
     
     // ============ ROW 13: LBP User's drawer cash ============
-    _setCell(sheet, 'A13', userName, dataStyle);
-    _setCellInt(sheet, 'B13', count.lbpQty[0], dataStyle);
-    _setCellInt(sheet, 'C13', count.lbpQty[1], dataStyle);
-    _setCellInt(sheet, 'D13', count.lbpQty[2], dataStyle);
-    _setCellInt(sheet, 'E13', count.lbpQty[3], dataStyle);
-    _setCellInt(sheet, 'F13', count.lbpQty[4], dataStyle);
-    _setCellInt(sheet, 'G13', count.lbpQty[5], dataStyle);
-    _setFormulaWithFormat(sheet, 'H13', 'B13*100000+C13*50000+D13*20000+E13*10000+F13*5000+G13*1000', dataStyle);
-    _setEmptyCell(sheet, 'J13', dataStyle);
-    _setFormulaWithFormat(sheet, 'K13', 'H13-J13', dataStyle);
+    _setCell(sheet, 'A13', userName, dataStyleName);
+    _setCellInt(sheet, 'B13', count.lbpQty[0], dataStyleNumber);
+    _setCellInt(sheet, 'C13', count.lbpQty[1], dataStyleNumber);
+    _setCellInt(sheet, 'D13', count.lbpQty[2], dataStyleNumber);
+    _setCellInt(sheet, 'E13', count.lbpQty[3], dataStyleNumber);
+    _setCellInt(sheet, 'F13', count.lbpQty[4], dataStyleNumber);
+    _setCellInt(sheet, 'G13', count.lbpQty[5], dataStyleNumber);
+    _setFormulaWithFormat(sheet, 'H13', 'B13*100000+C13*50000+D13*20000+E13*10000+F13*5000+G13*1000', dataStyleNumber);
+    _setEmptyCell(sheet, 'J13', dataStyleNumber);
+    _setFormulaWithFormat(sheet, 'K13', 'H13-J13', dataStyleNumber);
     
     // ============ ROW 14: LBP Empty row ============
-    _setEmptyCell(sheet, 'A14', dataStyle);
-    _setEmptyCell(sheet, 'B14', dataStyle);
-    _setEmptyCell(sheet, 'C14', dataStyle);
-    _setEmptyCell(sheet, 'D14', dataStyle);
-    _setEmptyCell(sheet, 'E14', dataStyle);
-    _setEmptyCell(sheet, 'F14', dataStyle);
-    _setEmptyCell(sheet, 'G14', dataStyle);
-    _setFormulaWithFormat(sheet, 'H14', 'B14*100000+C14*50000+D14*20000+E14*10000+F14*5000+G14*1000', dataStyle);
-    _setEmptyCell(sheet, 'J14', dataStyle);
-    _setFormulaWithFormat(sheet, 'K14', 'H14-J14', dataStyle);
+    _setEmptyCell(sheet, 'A14', dataStyleNumber);
+    _setEmptyCell(sheet, 'B14', dataStyleNumber);
+    _setEmptyCell(sheet, 'C14', dataStyleNumber);
+    _setEmptyCell(sheet, 'D14', dataStyleNumber);
+    _setEmptyCell(sheet, 'E14', dataStyleNumber);
+    _setEmptyCell(sheet, 'F14', dataStyleNumber);
+    _setEmptyCell(sheet, 'G14', dataStyleNumber);
+    _setFormulaWithFormat(sheet, 'H14', 'B14*100000+C14*50000+D14*20000+E14*10000+F14*5000+G14*1000', dataStyleNumber);
+    _setEmptyCell(sheet, 'J14', dataStyleNumber);
+    _setFormulaWithFormat(sheet, 'K14', 'H14-J14', dataStyleNumber);
     
-    // ============ ROW 15: LBP TOTAL ============
+    // ============ ROW 15: LBP TOTAL - Blue Accent 1 Lighter 80% ============
     _setCell(sheet, 'A15', 'TOTAL', totalRowStyle);
     _setFormulaWithFormat(sheet, 'B15', 'SUM(B11:B14)', totalRowStyle);
     _setFormulaWithFormat(sheet, 'C15', 'SUM(C11:C14)', totalRowStyle);
@@ -252,8 +281,8 @@ class ExcelExportService {
     // ============ ROW 16: Empty ============
     
     // ============ ROW 17: DATE ============
-    _setCell(sheet, 'G17', 'DATE :', dataStyle);
-    _setCell(sheet, 'H17', count.date, dataStyle);
+    _setCell(sheet, 'G17', 'DATE :', dataStyleNumber);
+    _setCell(sheet, 'H17', count.date, dataStyleNumber);
     
     // ============ ROW 18: Empty ============
     
@@ -265,11 +294,11 @@ class ExcelExportService {
     _setCell(sheet, 'E19', 'ACC #', tajHeaderStyle);
     
     // ============ ROW 20: TAJ Data ============
-    _setCell(sheet, 'A20', '1', dataStyle);
-    _setCell(sheet, 'B20', count.tajPerson, dataStyle);
-    _setCell(sheet, 'C20', count.tajUser, dataStyle);
-    _setCell(sheet, 'D20', count.tajPass, dataStyle);
-    _setCell(sheet, 'E20', count.tajAccNum, dataStyle);
+    _setCell(sheet, 'A20', '1', dataStyleNumber);
+    _setCell(sheet, 'B20', count.tajPerson, dataStyleNumber);
+    _setCell(sheet, 'C20', count.tajUser, dataStyleNumber);
+    _setCell(sheet, 'D20', count.tajPass, dataStyleNumber);
+    _setCell(sheet, 'E20', count.tajAccNum, dataStyleNumber);
     
     // Set column widths
     sheet.setColumnWidth(0, 12);   // A
@@ -284,8 +313,9 @@ class ExcelExportService {
     sheet.setColumnWidth(9, 14);   // J - SEND TO HO
     sheet.setColumnWidth(10, 22);  // K - REMAINING BALANCE
     
-    // Set row heights to 60 pixels (approximately 45 points)
-    for (int i = 1; i <= 20; i++) {
+    // Set row heights
+    sheet.setRowHeight(1, 30);  // Title row - 30 pixels
+    for (int i = 2; i <= 20; i++) {
       sheet.setRowHeight(i, 45);
     }
     
