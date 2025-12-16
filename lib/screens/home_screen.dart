@@ -295,11 +295,11 @@ class _HomeScreenState extends State<HomeScreen> {
           
           return AlertDialog(
             backgroundColor: const Color(0xFF2a2a2a),
-            title: Row(
+            title: const Row(
               children: [
-                const Icon(Icons.currency_exchange, color: Colors.orange, size: 20),
-                const SizedBox(width: 8),
-                const Text(
+                Icon(Icons.currency_exchange, color: Colors.orange, size: 20),
+                SizedBox(width: 8),
+                Text(
                   'Exchange Calculator',
                   style: TextStyle(color: Colors.white, fontSize: 16),
                 ),
@@ -775,11 +775,11 @@ class _HomeScreenState extends State<HomeScreen> {
           
           return AlertDialog(
             backgroundColor: const Color(0xFF2a2a2a),
-            title: Row(
+            title: const Row(
               children: [
-                const Icon(Icons.account_balance_wallet, color: Colors.orange, size: 20),
-                const SizedBox(width: 8),
-                const Text(
+                Icon(Icons.account_balance_wallet, color: Colors.orange, size: 20),
+                SizedBox(width: 8),
+                Text(
                   'TAJ Balance',
                   style: TextStyle(color: Colors.white, fontSize: 16),
                 ),
@@ -999,11 +999,11 @@ class _HomeScreenState extends State<HomeScreen> {
             // PIN Entry Screen
             return AlertDialog(
               backgroundColor: const Color(0xFF2a2a2a),
-              title: Row(
+              title: const Row(
                 children: [
-                  const Icon(Icons.lock, color: Colors.orange, size: 20),
-                  const SizedBox(width: 8),
-                  const Text(
+                  Icon(Icons.lock, color: Colors.orange, size: 20),
+                  SizedBox(width: 8),
+                  Text(
                     'Branch Settings (Safe)',
                     style: TextStyle(color: Colors.white, fontSize: 16),
                   ),
@@ -1129,16 +1129,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 builder: (context, setInnerState) {
                   return AlertDialog(
                     backgroundColor: const Color(0xFF2a2a2a),
-                    title: Row(
+                    title: const Row(
                       children: [
-                        const Icon(Icons.account_balance, color: Colors.orange, size: 20),
-                        const SizedBox(width: 8),
-                        const Text(
+                        Icon(Icons.account_balance, color: Colors.orange, size: 20),
+                        SizedBox(width: 8),
+                        Text(
                           'Branch (Safe) Cash',
                           style: TextStyle(color: Colors.white, fontSize: 16),
                         ),
-                        const Spacer(),
-                        const Icon(Icons.lock_open, color: Colors.green, size: 16),
+                        Spacer(),
+                        Icon(Icons.lock_open, color: Colors.green, size: 16),
                       ],
                     ),
                     content: SizedBox(
@@ -1260,7 +1260,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                               SizedBox(
                                                 width: 50,
                                                 child: Text(
-                                                  '${_numberFormat.format(lbpUnits[i])}',
+                                                  _numberFormat.format(lbpUnits[i]),
                                                   style: const TextStyle(color: Colors.blue, fontSize: 10),
                                                 ),
                                               ),
@@ -1302,7 +1302,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                           children: [
                                             const Text('Total:', style: TextStyle(color: Colors.white, fontSize: 12)),
                                             Text(
-                                              '${_numberFormat.format(calcLbpTotal())}',
+                                              _numberFormat.format(calcLbpTotal()),
                                               style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 13),
                                             ),
                                           ],
@@ -1718,7 +1718,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   SizedBox(
                     width: 55,
                     child: Text(
-                      '${_numberFormat.format(lbpUnits[index])}',
+                      _numberFormat.format(lbpUnits[index]),
                       style: const TextStyle(color: Colors.blue, fontSize: 11),
                     ),
                   ),
@@ -1760,7 +1760,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   SizedBox(
                     width: 70,
                     child: Text(
-                      '${_numberFormat.format(lbpUnits[index] * (int.tryParse(lbpControllers[index].text) ?? 0))}',
+                      _numberFormat.format(lbpUnits[index] * (int.tryParse(lbpControllers[index].text) ?? 0)),
                       style: TextStyle(color: Colors.grey[400], fontSize: 11),
                       textAlign: TextAlign.right,
                     ),
@@ -1973,7 +1973,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     children: [
                                       const Text('Total:', style: TextStyle(color: Colors.white, fontSize: 12)),
                                       Text(
-                                        '${_numberFormat.format(lbpTotal)}',
+                                        _numberFormat.format(lbpTotal),
                                       style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 13),
                                     ),
                                   ],
@@ -2343,7 +2343,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         height: 36,
                         child: Row(
                           children: [
-                            Icon(Icons.receipt_long, size: 16, color: Colors.orange),
+                            const Icon(Icons.receipt_long, size: 16, color: Colors.orange),
                             const SizedBox(width: 8),
                             const Text('Transactions', style: TextStyle(color: Colors.white, fontSize: 13)),
                             const SizedBox(width: 8),
@@ -2356,7 +2356,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         height: 36,
                         child: Row(
                           children: [
-                            Icon(Icons.account_balance_wallet, size: 16, color: Colors.orange),
+                            const Icon(Icons.account_balance_wallet, size: 16, color: Colors.orange),
                             const SizedBox(width: 8),
                             const Text('TAJ Balance', style: TextStyle(color: Colors.white, fontSize: 13)),
                             const SizedBox(width: 8),
@@ -2369,7 +2369,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         height: 36,
                         child: Row(
                           children: [
-                            Icon(Icons.calculate, size: 16, color: Colors.orange),
+                            const Icon(Icons.calculate, size: 16, color: Colors.orange),
                             const SizedBox(width: 8),
                             const Text('Cash Count', style: TextStyle(color: Colors.white, fontSize: 13)),
                             const SizedBox(width: 8),
@@ -2382,7 +2382,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         height: 36,
                         child: Row(
                           children: [
-                            Icon(Icons.history, size: 16, color: Colors.blue),
+                            const Icon(Icons.history, size: 16, color: Colors.blue),
                             const SizedBox(width: 8),
                             const Text('Cash History', style: TextStyle(color: Colors.white, fontSize: 13)),
                             const SizedBox(width: 8),
@@ -2395,7 +2395,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         height: 36,
                         child: Row(
                           children: [
-                            Icon(Icons.currency_exchange, size: 16, color: Colors.green),
+                            const Icon(Icons.currency_exchange, size: 16, color: Colors.green),
                             const SizedBox(width: 8),
                             const Text('Exchange', style: TextStyle(color: Colors.white, fontSize: 13)),
                             const SizedBox(width: 8),
@@ -2408,7 +2408,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         height: 36,
                         child: Row(
                           children: [
-                            Icon(Icons.calculate_outlined, size: 16, color: Colors.purple),
+                            const Icon(Icons.calculate_outlined, size: 16, color: Colors.purple),
                             const SizedBox(width: 8),
                             const Text('Win Calculator', style: TextStyle(color: Colors.white, fontSize: 13)),
                             const SizedBox(width: 8),
@@ -2422,7 +2422,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         height: 36,
                         child: Row(
                           children: [
-                            Icon(Icons.account_balance, size: 16, color: Colors.orange),
+                            const Icon(Icons.account_balance, size: 16, color: Colors.orange),
                             const SizedBox(width: 8),
                             const Text('Branch Settings', style: TextStyle(color: Colors.white, fontSize: 13)),
                             const SizedBox(width: 8),
@@ -2741,7 +2741,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-    );
+    ));
   }
 
   Widget _buildVerticalModeButton(int mode, String label, String rate, String desc, Color color) {
