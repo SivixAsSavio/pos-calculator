@@ -10,7 +10,7 @@ import 'excel_export_stub.dart'
 class ExcelExportService {
   // Colors - Blue, Accent 1 variations
   static const String _blueAccent1Lighter40 = 'FF8FAADC';  // Blue, Accent 1, Lighter 40%
-  static const String _blueAccent1Lighter80 = 'FFD6DCE5';  // Blue, Accent 1, Lighter 80%
+  static const String _blueAccent1Lighter60 = 'FFB4C6E7';  // Blue, Accent 1, Lighter 60%
   static const String _white = 'FFFFFFFF';
   static const String _black = 'FF000000';
 
@@ -29,7 +29,6 @@ class ExcelExportService {
     
     // Title style - 16px font, bottom and right border only
     final titleStyle = CellStyle(
-      bold: true,
       fontSize: 16,
       verticalAlign: VerticalAlign.Center,
       horizontalAlign: HorizontalAlign.Left,
@@ -41,7 +40,6 @@ class ExcelExportService {
     final denomHeaderStyle = CellStyle(
       backgroundColorHex: ExcelColor.fromHexString(_white),
       fontColorHex: ExcelColor.fromHexString(_black),
-      bold: true,
       fontSize: 12,
       horizontalAlign: HorizontalAlign.Center,
       verticalAlign: VerticalAlign.Center,
@@ -55,7 +53,6 @@ class ExcelExportService {
     final sectionHeaderStyle = CellStyle(
       backgroundColorHex: ExcelColor.fromHexString(_blueAccent1Lighter40),
       fontColorHex: ExcelColor.fromHexString(_black),
-      bold: true,
       fontSize: 12,
       horizontalAlign: HorizontalAlign.Center,
       verticalAlign: VerticalAlign.Center,
@@ -87,11 +84,10 @@ class ExcelExportService {
       bottomBorder: _thinBorder,
     );
     
-    // Total row style (bottom calculation rows) - Blue Accent 1 Lighter 80%
+    // Total row style (bottom calculation rows) - Blue Accent 1 Lighter 60%
     final totalRowStyle = CellStyle(
-      backgroundColorHex: ExcelColor.fromHexString(_blueAccent1Lighter80),
+      backgroundColorHex: ExcelColor.fromHexString(_blueAccent1Lighter60),
       fontColorHex: ExcelColor.fromHexString(_black),
-      bold: true,
       fontSize: 12,
       horizontalAlign: HorizontalAlign.Center,
       verticalAlign: VerticalAlign.Center,
@@ -104,7 +100,6 @@ class ExcelExportService {
     final tajHeaderStyle = CellStyle(
       backgroundColorHex: ExcelColor.fromHexString(_blueAccent1Lighter40),
       fontColorHex: ExcelColor.fromHexString(_black),
-      bold: true,
       fontSize: 11,
       horizontalAlign: HorizontalAlign.Center,
       verticalAlign: VerticalAlign.Center,
@@ -313,10 +308,9 @@ class ExcelExportService {
     sheet.setColumnWidth(9, 14);   // J - SEND TO HO
     sheet.setColumnWidth(10, 22);  // K - REMAINING BALANCE
     
-    // Set row heights
-    sheet.setRowHeight(1, 30);  // Title row - 30 pixels
-    for (int i = 2; i <= 20; i++) {
-      sheet.setRowHeight(i, 45);
+    // Set row heights - all 30 pixels
+    for (int i = 1; i <= 20; i++) {
+      sheet.setRowHeight(i, 30);
     }
     
     return Uint8List.fromList(excel.encode()!);
