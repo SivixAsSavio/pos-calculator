@@ -16,7 +16,6 @@ class ExcelExportService {
 
   // Border style
   static Border get _thinBorder => Border(borderStyle: BorderStyle.Thin, borderColorHex: ExcelColor.fromHexString(_black));
-  static Border get _noBorder => Border(borderStyle: BorderStyle.None);
 
   /// Generate proper Excel file with FORMULAS matching the exact layout
   static Uint8List generateExcelBytes(CashCount count) {
@@ -430,7 +429,8 @@ class ExcelExportService {
         final cell = sheet.cell(CellIndex.indexByString(cellRef));
         if (cell.value == null) return '';
         if (cell.value is TextCellValue) {
-          return (cell.value as TextCellValue).value;
+          final textValue = cell.value as TextCellValue;
+          return textValue.value.text ?? '';
         }
         return cell.value.toString();
       }

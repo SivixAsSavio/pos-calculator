@@ -8,6 +8,8 @@ class BranchSettings {
   final String tajUser;     // TAJ username
   final String tajPass;     // TAJ password
   final String tajAccNum;   // TAJ account number
+  final double sendToHoUsd; // Amount sent to Head Office (USD)
+  final int sendToHoLbp;    // Amount sent to Head Office (LBP)
 
   BranchSettings({
     required this.usdQty,
@@ -17,6 +19,8 @@ class BranchSettings {
     this.tajUser = '',
     this.tajPass = '',
     this.tajAccNum = '',
+    this.sendToHoUsd = 0,
+    this.sendToHoLbp = 0,
   });
 
   int get usdTotal {
@@ -45,6 +49,8 @@ class BranchSettings {
     String? tajUser,
     String? tajPass,
     String? tajAccNum,
+    double? sendToHoUsd,
+    int? sendToHoLbp,
   }) {
     return BranchSettings(
       usdQty: usdQty ?? List.from(this.usdQty),
@@ -54,6 +60,8 @@ class BranchSettings {
       tajUser: tajUser ?? this.tajUser,
       tajPass: tajPass ?? this.tajPass,
       tajAccNum: tajAccNum ?? this.tajAccNum,
+      sendToHoUsd: sendToHoUsd ?? this.sendToHoUsd,
+      sendToHoLbp: sendToHoLbp ?? this.sendToHoLbp,
     );
   }
 }
@@ -66,6 +74,8 @@ class BranchSettingsService {
   static const String _tajUserKey = 'branch_taj_user';
   static const String _tajPassKey = 'branch_taj_pass';
   static const String _tajAccNumKey = 'branch_taj_accnum';
+  static const String _sendToHoUsdKey = 'branch_send_ho_usd';
+  static const String _sendToHoLbpKey = 'branch_send_ho_lbp';
 
   static BranchSettings? _cached;
 
@@ -82,6 +92,8 @@ class BranchSettingsService {
     final tajUser = prefs.getString(_tajUserKey) ?? '';
     final tajPass = prefs.getString(_tajPassKey) ?? '';
     final tajAccNum = prefs.getString(_tajAccNumKey) ?? '';
+    final sendToHoUsd = prefs.getDouble(_sendToHoUsdKey) ?? 0;
+    final sendToHoLbp = prefs.getInt(_sendToHoLbpKey) ?? 0;
 
     List<int> usdQty = [0, 0, 0, 0, 0, 0];
     List<int> lbpQty = [0, 0, 0, 0, 0, 0];
@@ -108,6 +120,8 @@ class BranchSettingsService {
       tajUser: tajUser,
       tajPass: tajPass,
       tajAccNum: tajAccNum,
+      sendToHoUsd: sendToHoUsd,
+      sendToHoLbp: sendToHoLbp,
     );
     return _cached!;
   }
@@ -123,6 +137,8 @@ class BranchSettingsService {
     await prefs.setString(_tajUserKey, settings.tajUser);
     await prefs.setString(_tajPassKey, settings.tajPass);
     await prefs.setString(_tajAccNumKey, settings.tajAccNum);
+    await prefs.setDouble(_sendToHoUsdKey, settings.sendToHoUsd);
+    await prefs.setInt(_sendToHoLbpKey, settings.sendToHoLbp);
     
     _cached = settings;
   }
