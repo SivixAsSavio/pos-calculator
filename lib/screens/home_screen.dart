@@ -624,7 +624,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _handleGlobalKeyEvent(RawKeyDownEvent event) {
+  void _handleGlobalKeyEvent(KeyEvent event) {
     // Handle F-keys globally (works even when dialogs are not open)
     if (event.logicalKey == LogicalKeyboardKey.f1) {
       Navigator.push(
@@ -2414,13 +2414,24 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final modeColor = _getModeColor(_selectedMode);
     
-    return RawKeyboardListener(
-      focusNode: FocusNode()..requestFocus(),
+    return Focus(
       autofocus: true,
-      onKey: (event) {
-        if (event is RawKeyDownEvent) {
-          _handleGlobalKeyEvent(event);
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent) {
+          // Only handle F-keys, let other keys pass through to text input
+          if (event.logicalKey == LogicalKeyboardKey.f1 ||
+              event.logicalKey == LogicalKeyboardKey.f2 ||
+              event.logicalKey == LogicalKeyboardKey.f3 ||
+              event.logicalKey == LogicalKeyboardKey.f4 ||
+              event.logicalKey == LogicalKeyboardKey.f5 ||
+              event.logicalKey == LogicalKeyboardKey.f6 ||
+              event.logicalKey == LogicalKeyboardKey.f8 ||
+              event.logicalKey == LogicalKeyboardKey.f9) {
+            _handleGlobalKeyEvent(event);
+            return KeyEventResult.handled;
+          }
         }
+        return KeyEventResult.ignored;
       },
       child: Scaffold(
         backgroundColor: const Color(0xFF1a1a1a),
